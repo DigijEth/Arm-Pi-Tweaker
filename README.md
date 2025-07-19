@@ -1,9 +1,25 @@
 
 
 
+
+
+
+
+
+
 ![Project Logo](https://i.ibb.co/1JJMwJNg/logo1.jpg)
 
 
+
+
+
+
+
+
+
+
+
+Note:LCCM / LCCE is the GUI version of the Arm-Pi Tweaker, it is not safe for public release yet. It is more likely to damage your system so it is not included.
 
 # Orange-Pi Builder
 
