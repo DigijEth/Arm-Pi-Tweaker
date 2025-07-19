@@ -1,0 +1,121 @@
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include "rk3588s.dtsi"
+#include "rk3588s-orangepi-5.dtsi"
+
+/ {
+    model = "Orange Pi 5 Plus - debian-11 - Kernel 6.10 - mesa";
+    compatible = "xunlong,orangepi-5-plus", "rockchip,rk3588s";
+    
+    metadata {
+        build-type = "desktop";
+        kernel-version = "6.10";
+        distro-name = "debian";
+        distro-version = "11";
+        gpu-driver = "mesa";
+    };
+
+    chosen {
+        bootargs = "console=ttyS2,1500000n8 root=/dev/mmcblk0p2 rootwait rw";
+    };
+};
+
+/* Panfrost open-source GPU driver configuration */
+&gpu {
+    compatible = "rockchip,rk3588-mali", "arm,mali-g610";
+    mali-supply = <&vdd_gpu_s0>;
+    operating-points-v2 = <&gpu_opp_table>;
+    status = "okay";
+    
+    /* Panfrost specific properties */
+    #cooling-cells = <2>;
+    dynamic-power-coefficient = <2982>;
+    
+    gpu_opp_table: opp-table {
+        compatible = "operating-points-v2";
+        
+        opp-200000000 {
+            opp-hz = /bits/ 64 <200000000>;
+            opp-microvolt = <675000>;
+        };
+        opp-300000000 {
+            opp-hz = /bits/ 64 <300000000>;
+            opp-microvolt = <675000>;
+        };
+        opp-500000000 {
+            opp-hz = /bits/ 64 <500000000>;
+            opp-microvolt = <750000>;
+        };
+        opp-800000000 {
+            opp-hz = /bits/ 64 <800000000>;
+            opp-microvolt = <850000>;
+        };
+        opp-1000000000 {
+            opp-hz = /bits/ 64 <1000000000>;
+            opp-microvolt = <950000>;
+        };
+    };
+};
+
+/* Enable common peripherals */
+&gmac0 {
+    status = "okay";
+};
+
+&i2c0 {
+    status = "okay";
+};
+
+&i2c2 {
+    status = "okay";
+};
+
+&i2c6 {
+    status = "okay";
+};
+
+&pcie2x1l2 {
+    status = "okay";
+};
+
+&pcie3x4 {
+    status = "okay";
+};
+
+&sdhci {
+    status = "okay";
+};
+
+&sdmmc {
+    status = "okay";
+};
+
+&tsadc {
+    status = "okay";
+};
+
+&uart2 {
+    status = "okay";
+};
+
+&usb_host0_ehci {
+    status = "okay";
+};
+
+&usb_host0_ohci {
+    status = "okay";
+};
+
+&usb_host1_ehci {
+    status = "okay";
+};
+
+&usb_host1_ohci {
+    status = "okay";
+};
+
+&usb_host2_xhci {
+    status = "okay";
+};
+

@@ -1,0 +1,821 @@
+#!/usr/bin/env python3
+"""
+Debian GameScope Custom Build Script for Orange Pi 5 Plus with Mali-G610 Valhall Drivers
+
+This script creates a minimal Debian-based gaming OS with Gamescope compositor,
+optimized for the RK3588S SoC and Mali-G610 MP4 GPU using proprietary Valhall drivers.
+"""
+
+import os
+import sys
+import subprocess
+import shutil
+import argparse
+import logging
+import tempfile
+from pathlib import Path
+from typing import List, Optional
+
+# Configuration
+DEFAULT_CONFIG = {
+    'debian_suite': 'bookworm',
+    'architecture': 'arm64',
+    'image_size': '8G',
+    'mali_version': 'g13p0',  # g13p0 or g6p0
+    'gpu_frequency': '1000000000',  # 1GHz
+    'cma_size': '512M',
+    'output_dir': './build-output',
+    'kernel_version': '5.10.160-rockchip-rk3588'
+}
+
+class Colors:
+    """ANSI color codes for terminal output"""
+    RED = '\033[0;31m'
+    GREEN = '\033[0;32m'
+    YELLOW = '\033[1;33m'
+    BLUE = '\033[0;34m'
+    PURPLE = '\033[0;35m'
+    CYAN = '\033[0;36m'
+    NC = '\033[0m'  # No Color
+
+class GameScopeBuilder:
+    """Main builder class for Debian GameScope image"""
+    
+    def __init__(self, config: dict):
+        self.config = config
+        self.setup_logging()
+        self.build_dir = Path(config['output_dir'])
+        self.chroot_dir = self.build_dir / 'chroot'
+        self.image_file = self.build_dir / f"gamescope-debian-{config['architecture']}.img"
+        self.loop_device = None
+        
+    def setup_logging(self):
+        """Setup logging configuration"""
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler('gamescope-build.log'),
+                logging.StreamHandler()
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+    
+    def print_status(self, message: str):
+        """Print colored status message"""
+        print(f"{Colors.GREEN}[INFO]{Colors.NC} {message}")
+        self.logger.info(message)
+    
+    def print_warning(self, message: str):
+        """Print colored warning message"""
+        print(f"{Colors.YELLOW}[WARNING]{Colors.NC} {message}")
+        self.logger.warning(message)
+    
+    def print_error(self, message: str):
+        """Print colored error message"""
+        print(f"{Colors.RED}[ERROR]{Colors.NC} {message}")
+        self.logger.error(message)
+    
+    def run_command(self, cmd: List[str], check: bool = True, cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
+        """Run shell command with error handling"""
+        self.logger.debug(f"Running command: {' '.join(cmd)}")
+        try:
+            result = subprocess.run(
+                cmd, 
+                check=check, 
+                capture_output=True, 
+                text=True,
+                cwd=cwd
+            )
+            if result.stdout:
+                self.logger.debug(f"STDOUT: {result.stdout}")
+            if result.stderr:
+                self.logger.debug(f"STDERR: {result.stderr}")
+            return result
+        except subprocess.CalledProcessError as e:
+            self.print_error(f"Command failed: {' '.join(cmd)}")
+            self.print_error(f"Error: {e.stderr}")
+            raise
+    
+    def check_dependencies(self):
+        """Check if required tools are installed"""
+        self.print_status("Checking dependencies...")
+        
+        required_tools = [
+            'debootstrap', 'qemu-user-static', 'parted', 'losetup',
+            'mount', 'umount', 'chroot', 'wget', 'git', 'dtc'
+        ]
+        
+        missing_tools = []
+        for tool in required_tools:
+            if not shutil.which(tool):
+                missing_tools.append(tool)
+        
+        if missing_tools:
+            self.print_error(f"Missing required tools: {', '.join(missing_tools)}")
+            self.print_status("Installing missing dependencies...")
+            self.run_command([
+                'sudo', 'apt', 'update'
+            ])
+            self.run_command([
+                'sudo', 'apt', 'install', '-y',
+                'debootstrap', 'qemu-user-static', 'binfmt-support',
+                'parted', 'kpartx', 'dosfstools', 'e2fsprogs',
+                'device-tree-compiler', 'build-essential', 'git',
+                'wget', 'curl', 'bc'
+            ])
+    
+    def create_build_environment(self):
+        """Create build directories and setup environment"""
+        self.print_status("Creating build environment...")
+        
+        self.build_dir.mkdir(parents=True, exist_ok=True)
+        self.chroot_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create subdirectories
+        (self.build_dir / 'downloads').mkdir(exist_ok=True)
+        (self.build_dir / 'patches').mkdir(exist_ok=True)
+        (self.build_dir / 'overlays').mkdir(exist_ok=True)
+    
+    def create_image_file(self):
+        """Create and partition the image file"""
+        self.print_status(f"Creating image file: {self.image_file}")
+        
+        # Create empty image file
+        size_bytes = self.config['image_size']
+        if size_bytes.endswith('G'):
+            size_mb = int(size_bytes[:-1]) * 1024
+        elif size_bytes.endswith('M'):
+            size_mb = int(size_bytes[:-1])
+        else:
+            raise ValueError("Image size must end with 'G' or 'M'")
+        
+        self.run_command([
+            'dd', 'if=/dev/zero', f'of={self.image_file}',
+            'bs=1M', 'count=0', f'seek={size_mb}', 'status=progress'
+        ])
+        
+        # Create partition table
+        self.print_status("Creating partition table...")
+        self.run_command([
+            'parted', str(self.image_file), '--script', '--',
+            'mklabel', 'msdos',
+            'mkpart', 'primary', 'ext4', '1MiB', '-1s',
+            'set', '1', 'boot', 'on'
+        ])
+        
+        # Setup loop device
+        result = self.run_command([
+            'sudo', 'losetup', '--find', '--show', str(self.image_file)
+        ])
+        self.loop_device = result.stdout.strip()
+        self.print_status(f"Loop device: {self.loop_device}")
+        
+        # Create partitions
+        self.run_command(['sudo', 'partprobe', self.loop_device])
+        
+        # Format partition
+        self.print_status("Formatting partition...")
+        self.run_command([
+            'sudo', 'mkfs.ext4', '-F', f'{self.loop_device}p1'
+        ])
+    
+    def mount_image(self):
+        """Mount the image for modification"""
+        self.print_status("Mounting image...")
+        
+        self.run_command([
+            'sudo', 'mount', f'{self.loop_device}p1', str(self.chroot_dir)
+        ])
+    
+    def bootstrap_debian(self):
+        """Bootstrap Debian base system"""
+        self.print_status(f"Bootstrapping Debian {self.config['debian_suite']} for {self.config['architecture']}...")
+        
+        # First stage bootstrap
+        self.run_command([
+            'sudo', 'debootstrap',
+            '--arch', self.config['architecture'],
+            '--include', 'systemd,network-manager,openssh-server,sudo,vim,curl,wget,build-essential',
+            self.config['debian_suite'],
+            str(self.chroot_dir),
+            'http://deb.debian.org/debian'
+        ])
+        
+        # Copy qemu static for cross-compilation
+        if self.config['architecture'] != 'amd64':
+            qemu_static = f"/usr/bin/qemu-{self.config['architecture']}-static"
+            if Path(qemu_static).exists():
+                self.run_command([
+                    'sudo', 'cp', qemu_static, str(self.chroot_dir / 'usr/bin/')
+                ])
+    
+    def setup_chroot_mounts(self):
+        """Setup necessary mounts for chroot"""
+        self.print_status("Setting up chroot mounts...")
+        
+        mounts = [
+            ('proc', 'proc'),
+            ('sysfs', 'sys'),
+            ('devtmpfs', 'dev'),
+            ('devpts', 'dev/pts')
+        ]
+        
+        for fstype, mount_point in mounts:
+            self.run_command([
+                'sudo', 'mount', '-t', fstype, fstype,
+                str(self.chroot_dir / mount_point)
+            ])
+    
+    def configure_base_system(self):
+        """Configure the base Debian system"""
+        self.print_status("Configuring base system...")
+        
+        # Create configuration script
+        config_script = f"""#!/bin/bash
+set -e
+
+# Set hostname
+echo "orangepi-gamescope" > /etc/hostname
+
+# Configure hosts
+cat > /etc/hosts << 'EOF'
+127.0.0.1   localhost
+127.0.1.1   orangepi-gamescope
+::1         localhost ip6-localhost ip6-loopback
+ff02::1     ip6-allnodes
+ff02::2     ip6-allrouters
+EOF
+
+# Set passwords
+echo "root:gamescope" | chpasswd
+useradd -m -s /bin/bash gamescope
+echo "gamescope:gamescope" | chpasswd
+usermod -aG sudo,video,audio,input,render gamescope
+
+# Configure apt sources
+cat > /etc/apt/sources.list << 'EOF'
+deb http://deb.debian.org/debian {self.config['debian_suite']} main contrib non-free
+deb-src http://deb.debian.org/debian {self.config['debian_suite']} main contrib non-free
+deb http://deb.debian.org/debian-security {self.config['debian_suite']}-security main contrib non-free
+deb http://deb.debian.org/debian {self.config['debian_suite']}-updates main contrib non-free
+EOF
+
+# Update and install essential packages
+apt update
+apt install -y \\
+    locales keyboard-configuration console-setup tzdata ca-certificates \\
+    systemd-timesyncd systemd-resolved firmware-misc-nonfree \\
+    linux-image-{self.config['kernel_version']} \\
+    linux-headers-{self.config['kernel_version']} \\
+    u-boot-tools device-tree-compiler
+
+# Configure locales
+echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+locale-gen
+echo "LANG=en_US.UTF-8" > /etc/locale.conf
+
+# Configure timezone
+ln -sf /usr/share/zoneinfo/UTC /etc/localtime
+
+# Enable essential services
+systemctl enable ssh
+systemctl enable NetworkManager
+
+# Configure fstab
+cat > /etc/fstab << 'EOF'
+/dev/mmcblk0p1 / ext4 defaults,noatime 0 1
+tmpfs /tmp tmpfs defaults,noatime,nosuid,size=100m 0 0
+tmpfs /var/tmp tmpfs defaults,noatime,nosuid,size=30m 0 0
+EOF
+
+# Clean up
+apt clean
+rm -rf /var/lib/apt/lists/*
+"""
+        
+        # Write and execute configuration script
+        script_path = self.chroot_dir / 'tmp/configure-base.sh'
+        with open(script_path, 'w') as f:
+            f.write(config_script)
+        
+        self.run_command(['sudo', 'chmod', '+x', str(script_path)])
+        self.run_command(['sudo', 'chroot', str(self.chroot_dir), '/tmp/configure-base.sh'])
+    
+    def install_mali_drivers(self):
+        """Install Mali-G610 Valhall drivers"""
+        self.print_status("Installing Mali-G610 Valhall drivers...")
+        
+        downloads_dir = self.build_dir / 'downloads'
+        mali_version = self.config['mali_version']
+        
+        # Download Mali drivers
+        driver_url = f"https://github.com/tsukumijima/libmali-rockchip/releases/download/v1.9-1-55611b0/libmali-valhall-g610-{mali_version}-wayland-gbm_1.9-1_arm64.deb"
+        driver_file = downloads_dir / f"libmali-valhall-g610-{mali_version}-wayland-gbm_1.9-1_arm64.deb"
+        
+        if not driver_file.exists():
+            self.run_command(['wget', driver_url, '-O', str(driver_file)])
+        
+        # Copy driver to chroot
+        chroot_driver = self.chroot_dir / 'tmp/mali-driver.deb'
+        self.run_command(['sudo', 'cp', str(driver_file), str(chroot_driver)])
+        
+        # Download firmware
+        firmware_url = "https://github.com/JeffyCN/rockchip_mirrors/raw/libmali/firmware/g610/mali_csffw.bin"
+        firmware_dir = self.chroot_dir / 'lib/firmware'
+        self.run_command(['sudo', 'mkdir', '-p', str(firmware_dir)])
+        self.run_command(['sudo', 'wget', firmware_url, '-O', str(firmware_dir / 'mali_csffw.bin')])
+        self.run_command(['sudo', 'chmod', '644', str(firmware_dir / 'mali_csffw.bin')])
+        
+        # Install driver in chroot
+        install_script = f"""#!/bin/bash
+set -e
+
+# Install Mali driver
+dpkg -i /tmp/mali-driver.deb || apt-get install -f -y
+
+# Create symlinks
+cd /usr/lib/aarch64-linux-gnu/
+ln -sf libmali-valhall-g610-{mali_version}-wayland-gbm.so libmali.so.1
+ln -sf libmali.so.1 libEGL.so.1
+ln -sf libmali.so.1 libEGL.so
+ln -sf libmali.so.1 libGLESv2.so.2
+ln -sf libmali.so.1 libGLESv2.so
+ln -sf libmali.so.1 libgbm.so.1
+ln -sf libmali.so.1 libgbm.so
+
+# Configure Mali module
+cat > /etc/modprobe.d/mali.conf << 'EOF'
+options mali_kbase mali_debug_level=0
+options mali_kbase mali_shared_mem_size=536870912
+options mali_kbase js_scheduling_period_ns=100000000
+options mali_kbase js_reset_timeout_ms=1000
+options mali_kbase power_policy=always_on
+EOF
+
+echo "mali_kbase" >> /etc/modules-load.d/mali.conf
+
+# Create Vulkan ICD
+mkdir -p /usr/share/vulkan/icd.d
+cat > /usr/share/vulkan/icd.d/mali_icd.aarch64.json << 'EOF'
+{{
+    "file_format_version" : "1.0.0",
+    "ICD": {{
+        "library_path": "/usr/lib/aarch64-linux-gnu/libmali.so.1",
+        "api_version" : "1.2.0"
+    }}
+}}
+EOF
+"""
+        
+        script_path = self.chroot_dir / 'tmp/install-mali.sh'
+        with open(script_path, 'w') as f:
+            f.write(install_script)
+        
+        self.run_command(['sudo', 'chmod', '+x', str(script_path)])
+        self.run_command(['sudo', 'chroot', str(self.chroot_dir), '/tmp/install-mali.sh'])
+    
+    def create_device_tree_overlays(self):
+        """Create device tree overlays for GPU optimization"""
+        self.print_status("Creating device tree overlays...")
+        
+        overlay_dir = self.build_dir / 'overlays'
+        
+        # GPU overclock overlay
+        gpu_oc_dts = f"""
+/dts-v1/;
+/plugin/;
+
+/ {{
+    compatible = "rockchip,rk3588s";
+
+    fragment@0 {{
+        target = <&gpu>;
+        __overlay__ {{
+            operating-points-v2 = <&gpu_opp_table>;
+            mali-supply = <&vdd_gpu_s0>;
+            status = "okay";
+        }};
+    }};
+
+    fragment@1 {{
+        target = <&gpu_opp_table>;
+        __overlay__ {{
+            compatible = "operating-points-v2";
+            
+            opp-300000000 {{
+                opp-hz = /bits/ 64 <300000000>;
+                opp-microvolt = <675000>;
+            }};
+            opp-400000000 {{
+                opp-hz = /bits/ 64 <400000000>;
+                opp-microvolt = <700000>;
+            }};
+            opp-600000000 {{
+                opp-hz = /bits/ 64 <600000000>;
+                opp-microvolt = <750000>;
+            }};
+            opp-800000000 {{
+                opp-hz = /bits/ 64 <800000000>;
+                opp-microvolt = <850000>;
+            }};
+            opp-1000000000 {{
+                opp-hz = /bits/ 64 <{self.config['gpu_frequency']}>;
+                opp-microvolt = <950000>;
+            }};
+        }};
+    }};
+}};
+"""
+        
+        with open(overlay_dir / 'rk3588s-gpu-oc.dts', 'w') as f:
+            f.write(gpu_oc_dts)
+        
+        # Compile overlay
+        self.run_command([
+            'dtc', '-@', '-I', 'dts', '-O', 'dtb',
+            '-o', str(overlay_dir / 'rk3588s-gpu-oc.dtbo'),
+            str(overlay_dir / 'rk3588s-gpu-oc.dts')
+        ])
+        
+        # Copy to chroot
+        dtb_dir = self.chroot_dir / 'boot/dtbs/rockchip/overlay'
+        self.run_command(['sudo', 'mkdir', '-p', str(dtb_dir)])
+        self.run_command(['sudo', 'cp', str(overlay_dir / 'rk3588s-gpu-oc.dtbo'), str(dtb_dir)])
+    
+    def build_gamescope(self):
+        """Build and install Gamescope with Mali optimizations"""
+        self.print_status("Building Gamescope...")
+        
+        # Install build dependencies in chroot
+        deps_script = """#!/bin/bash
+set -e
+
+apt update
+apt install -y \\
+    libwayland-dev wayland-protocols \\
+    libxkbcommon-dev libpixman-1-dev \\
+    libx11-dev libxcb1-dev libxext-dev \\
+    libxxf86vm-dev libxres-dev \\
+    libsdl2-dev libglfw3-dev \\
+    libcap-dev libseat-dev \\
+    glslang-tools spirv-tools \\
+    libliftoff-dev hwdata \\
+    meson ninja-build pkg-config \\
+    git python3-mako
+"""
+        
+        script_path = self.chroot_dir / 'tmp/install-gamescope-deps.sh'
+        with open(script_path, 'w') as f:
+            f.write(deps_script)
+        
+        self.run_command(['sudo', 'chmod', '+x', str(script_path)])
+        self.run_command(['sudo', 'chroot', str(self.chroot_dir), '/tmp/install-gamescope-deps.sh'])
+        
+        # Clone Gamescope source
+        gamescope_dir = self.build_dir / 'gamescope'
+        if not gamescope_dir.exists():
+            self.run_command(['git', 'clone', '--recursive', 
+                            'https://github.com/ValveSoftware/gamescope.git',
+                            str(gamescope_dir)])
+        
+        # Build Gamescope
+        build_script = f"""#!/bin/bash
+set -e
+
+cd /tmp/gamescope
+export CFLAGS="-O3 -march=armv8-a+crc+crypto -mtune=cortex-a76.cortex-a55"
+export CXXFLAGS="${{CFLAGS}}"
+
+meson setup build \\
+    -Dprefix=/usr \\
+    -Dbuildtype=release \\
+    -Dstrip=true \\
+    -Db_lto=true \\
+    -Dforce_fallback_for=stb \\
+    -Dpipewire=disabled
+
+ninja -C build
+ninja -C build install
+"""
+        
+        # Copy Gamescope source to chroot
+        chroot_gamescope = self.chroot_dir / 'tmp/gamescope'
+        self.run_command(['sudo', 'cp', '-r', str(gamescope_dir), str(chroot_gamescope)])
+        
+        script_path = self.chroot_dir / 'tmp/build-gamescope.sh'
+        with open(script_path, 'w') as f:
+            f.write(build_script)
+        
+        self.run_command(['sudo', 'chmod', '+x', str(script_path)])
+        self.run_command(['sudo', 'chroot', str(self.chroot_dir), '/tmp/build-gamescope.sh'])
+    
+    def configure_gaming_system(self):
+        """Configure the gaming-specific system settings"""
+        self.print_status("Configuring gaming system...")
+        
+        config_script = f"""#!/bin/bash
+set -e
+
+# Create gamescope session wrapper
+cat > /usr/local/bin/gamescope-session << 'EOF'
+#!/bin/bash
+
+# Mali GPU environment
+export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/mali_icd.aarch64.json
+export MESA_LOADER_DRIVER_OVERRIDE=mali
+export EGL_PLATFORM=wayland
+export GBM_BACKEND=mali
+
+# Performance settings
+echo performance > /sys/class/devfreq/fb000000.gpu/governor
+echo {self.config['gpu_frequency']} > /sys/class/devfreq/fb000000.gpu/max_freq
+echo {self.config['gpu_frequency']} > /sys/class/devfreq/fb000000.gpu/min_freq
+
+# Memory controller performance
+echo performance > /sys/class/devfreq/dmc/governor
+
+# Launch Gamescope
+exec gamescope \\
+    --rt \\
+    --adaptive-sync \\
+    --immediate-flips \\
+    --force-grab-cursor \\
+    -W 1920 -H 1080 \\
+    -w 1920 -h 1080 \\
+    -r 60 \\
+    --expose-wayland \\
+    -- "$@"
+EOF
+
+chmod +x /usr/local/bin/gamescope-session
+
+# Create performance tuning script
+cat > /usr/local/bin/gaming-performance << 'EOF'
+#!/bin/bash
+
+# CPU Performance
+for cpu in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+    echo performance > $cpu 2>/dev/null
+done
+
+# GPU Performance
+echo performance > /sys/class/devfreq/fb000000.gpu/governor
+echo {self.config['gpu_frequency']} > /sys/class/devfreq/fb000000.gpu/max_freq
+echo {self.config['gpu_frequency']} > /sys/class/devfreq/fb000000.gpu/min_freq
+
+# Memory Performance
+echo performance > /sys/class/devfreq/dmc/governor
+echo 0 > /proc/sys/vm/swappiness
+echo 3 > /proc/sys/vm/drop_caches
+
+echo "Gaming performance mode activated"
+EOF
+
+chmod +x /usr/local/bin/gaming-performance
+
+# Create auto-login service
+cat > /etc/systemd/system/gamescope-autologin.service << 'EOF'
+[Unit]
+Description=Gamescope Gaming Session
+After=systemd-user-sessions.service
+
+[Service]
+Type=simple
+User=gamescope
+PAMName=login
+TTYPath=/dev/tty1
+Environment="XDG_SESSION_TYPE=wayland"
+ExecStartPre=/usr/local/bin/gaming-performance
+ExecStart=/usr/local/bin/gamescope-session /bin/bash
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable gamescope-autologin.service
+
+# Configure boot parameters
+cat >> /boot/armbianEnv.txt << 'EOF'
+extraargs=cma={self.config['cma_size']} coherent_pool=32M video=HDMI-A-1:1920x1080@60 
+extraargs+=mali.power_policy=always_on transparent_hugepage=always
+extraargs+=processor.max_cstate=1 rcu_nocbs=0-7
+EOF
+
+# Disable unnecessary services
+systemctl disable bluetooth ModemManager cups || true
+
+# Install benchmark tools
+apt update
+apt install -y glmark2-es2-wayland vulkan-tools
+
+# Clean up
+apt clean
+rm -rf /var/lib/apt/lists/*
+"""
+        
+        script_path = self.chroot_dir / 'tmp/configure-gaming.sh'
+        with open(script_path, 'w') as f:
+            f.write(config_script)
+        
+        self.run_command(['sudo', 'chmod', '+x', str(script_path)])
+        self.run_command(['sudo', 'chroot', str(self.chroot_dir), '/tmp/configure-gaming.sh'])
+    
+    def cleanup_chroot(self):
+        """Clean up chroot environment"""
+        self.print_status("Cleaning up chroot...")
+        
+        # Remove temporary files
+        self.run_command(['sudo', 'rm', '-rf', str(self.chroot_dir / 'tmp/*')], check=False)
+        
+        # Remove qemu static
+        qemu_static = self.chroot_dir / f'usr/bin/qemu-{self.config["architecture"]}-static'
+        if qemu_static.exists():
+            self.run_command(['sudo', 'rm', str(qemu_static)])
+    
+    def unmount_all(self):
+        """Unmount all mounted filesystems"""
+        self.print_status("Unmounting filesystems...")
+        
+        # Unmount in reverse order
+        mounts = ['dev/pts', 'dev', 'sys', 'proc', '']
+        for mount in mounts:
+            mount_path = self.chroot_dir / mount if mount else self.chroot_dir
+            try:
+                self.run_command(['sudo', 'umount', str(mount_path)], check=False)
+            except:
+                pass
+        
+        # Detach loop device
+        if self.loop_device:
+            try:
+                self.run_command(['sudo', 'losetup', '-d', self.loop_device], check=False)
+            except:
+                pass
+    
+    def create_checksum(self):
+        """Create checksum for the image"""
+        self.print_status("Creating checksum...")
+        
+        checksum_file = f"{self.image_file}.sha256"
+        self.run_command(['sha256sum', str(self.image_file)], 
+                        cwd=self.image_file.parent)
+        
+        with open(checksum_file, 'w') as f:
+            result = self.run_command(['sha256sum', self.image_file.name], 
+                                    cwd=self.image_file.parent)
+            f.write(result.stdout)
+    
+    def build(self):
+        """Main build process"""
+        try:
+            self.print_status("Starting Debian GameScope build for Orange Pi 5 Plus...")
+            self.print_status(f"Configuration: {self.config}")
+            
+            # Build steps
+            self.check_dependencies()
+            self.create_build_environment()
+            self.create_image_file()
+            self.mount_image()
+            self.bootstrap_debian()
+            self.setup_chroot_mounts()
+            self.configure_base_system()
+            self.install_mali_drivers()
+            self.create_device_tree_overlays()
+            self.build_gamescope()
+            self.configure_gaming_system()
+            self.cleanup_chroot()
+            
+            self.print_status("✓ Build completed successfully!")
+            self.print_status(f"Image location: {self.image_file}")
+            
+            # Create checksum
+            self.create_checksum()
+            
+            # Display final information
+            self.print_status("Build Summary:")
+            self.print_status(f"  Image: {self.image_file}")
+            self.print_status(f"  Size: {self.image_file.stat().st_size / (1024**3):.2f} GB")
+            self.print_status("  Default credentials:")
+            self.print_status("    Username: gamescope / Password: gamescope")
+            self.print_status("    Root: root / Password: gamescope")
+            
+        except Exception as e:
+            self.print_error(f"Build failed: {str(e)}")
+            raise
+        finally:
+            self.unmount_all()
+
+
+def main():
+    """Main entry point"""
+    parser = argparse.ArgumentParser(
+        description="Build Debian GameScope image for Orange Pi 5 Plus with Mali-G610"
+    )
+    
+    parser.add_argument('--suite', default=DEFAULT_CONFIG['debian_suite'],
+                       help='Debian suite (default: bookworm)')
+    parser.add_argument('--arch', default=DEFAULT_CONFIG['architecture'],
+                       help='Target architecture (default: arm64)')
+    parser.add_argument('--size', default=DEFAULT_CONFIG['image_size'],
+                       help='Image size (default: 8G)')
+    parser.add_argument('--mali-version', default=DEFAULT_CONFIG['mali_version'],
+                       choices=['g13p0', 'g6p0'],
+                       help='Mali driver version (default: g13p0)')
+    parser.add_argument('--gpu-freq', default=DEFAULT_CONFIG['gpu_frequency'],
+                       help='GPU frequency in Hz (default: 1000000000)')
+    parser.add_argument('--cma-size', default=DEFAULT_CONFIG['cma_size'],
+                       help='CMA size (default: 512M)')
+    parser.add_argument('--output-dir', default=DEFAULT_CONFIG['output_dir'],
+                       help='Output directory (default: ./build-output)')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                       help='Enable verbose logging')
+    
+    args = parser.parse_args()
+    
+    # Check if running as root
+    if os.geteuid() == 0:
+        print(f"{Colors.RED}[ERROR]{Colors.NC} This script should not be run as root.")
+        print("It will use sudo when needed.")
+        sys.exit(1)
+    
+    # Update configuration with command line arguments
+    config = DEFAULT_CONFIG.copy()
+    config.update({
+        'debian_suite': args.suite,
+        'architecture': args.arch,
+        'image_size': args.size,
+        'mali_version': args.mali_version,
+        'gpu_frequency': args.gpu_freq,
+        'cma_size': args.cma_size,
+        'output_dir': args.output_dir
+    })
+    
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+    
+    # Create builder and run
+    builder = GameScopeBuilder(config)
+    builder.build()
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
+    Key Features:
+🎯 Automated Build Process
+
+Creates a custom Debian Bookworm ARM64 image
+Installs Mali-G610 Valhall drivers (g13p0/g6p0)
+Builds and configures Gamescope compositor
+Optimizes for RK3588S SoC performance
+
+🛠 Core Components
+
+Base System: Minimal Debian with gaming optimizations
+Mali Drivers: Proprietary Valhall drivers with proper symlinks
+Gamescope: Built from source with Mali optimizations
+Device Tree: GPU overclocking to 1GHz
+Performance: CMA allocation, governor settings, boot parameters
+
+📋 Usage Examples
+bash# Basic build (creates 8GB ARM64 image)
+python3 gamescope-builder.py
+
+# Custom configuration
+python3 gamescope-builder.py \
+    --suite bullseye \
+    --size 4G \
+    --mali-version g6p0 \
+    --gpu-freq 800000000 \
+    --cma-size 256M
+
+# Verbose output
+python3 gamescope-builder.py --verbose
+🎮 What Gets Built
+
+Bootable Debian image optimized for gaming
+Mali-G610 drivers with Vulkan/OpenGL ES support
+Gamescope compositor with Mali-specific optimizations
+Auto-login gaming session
+Performance governors set to maximum
+1GHz GPU frequency (configurable)
+512MB CMA allocation for graphics memory
+
+🔧 Default Credentials
+
+User: gamescope / gamescope (with sudo)
+Root: root / gamescope
+
+📦 Output
+
+Creates gamescope-debian-arm64.img (flashable to SD card)
+Includes SHA256 checksum
+Detailed build log
+
+The script handles all the complexity from the original guide while providing a clean, automated build process with proper error handling and logging.

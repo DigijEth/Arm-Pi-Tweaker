@@ -1,0 +1,46 @@
+# Compiled files
+/target/
+**/*.rs.bk
+
+# Cargo package files
+**/*.crate
+
+# Backup files
+*~
+*.swp
+*.tmp
+*.bak
+
+# Output binaries (if you place them here)
+*.exe
+*.dll
+*.so
+*.dylib
+
+# macOS files
+.DS_Store
+
+# Windows files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEs and editors
+.idea/
+.vscode/
+*.code-workspace
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.*
+
+# Test output
+/coverage/
+debug.log
+
+# Other
+*.old
+*.orig

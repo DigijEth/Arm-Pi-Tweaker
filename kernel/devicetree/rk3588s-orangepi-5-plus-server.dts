@@ -1,0 +1,308 @@
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include "rk3588s.dtsi"
+#include "rk3588s-orangepi-5.dtsi"
+
+/ {
+    model = "Orange Pi 5 Plus - Server Edition";
+    compatible = "xunlong,orangepi-5-plus", "rockchip,rk3588s";
+    
+    metadata {
+        build-type = "server";
+        kernel-version = "6.6";
+        distro-name = "debian";
+        distro-version = "12";
+        configuration = "headless";
+    };
+
+    chosen {
+        bootargs = "console=ttyS2,1500000n8 root=/dev/mmcblk0p2 rootwait rw net.ifnames=0";
+    };
+
+    /* Server specific configurations */
+    server-config {
+        compatible = "server,config";
+        headless-mode = "enabled";
+        watchdog-enabled;
+        auto-reboot-on-panic;
+        network-priority = "high";
+    };
+
+    /* Watchdog for server reliability */
+    watchdog {
+        compatible = "linux,wdt-gpio";
+        gpios = <&gpio0 RK_PA6 GPIO_ACTIVE_LOW>;
+        hw_algo = "toggle";
+        hw_margin_ms = <1600>;
+        always-running;
+    };
+};
+
+/* Dual Gigabit Ethernet configuration */
+&gmac0 {
+    phy-mode = "rgmii";
+    clock_in_out = "output";
+    snps,reset-gpio = <&gpio3 RK_PB7 GPIO_ACTIVE_LOW>;
+    snps,reset-active-low;
+    snps,reset-delays-us = <0 10000 100000>;
+    assigned-clocks = <&cru SCLK_GMAC0_RX_TX>, <&cru SCLK_GMAC0>;
+    assigned-clock-parents = <&cru SCLK_GMAC0_RGMII_SPEED>;
+    pinctrl-names = "default";
+    pinctrl-0 = <&gmac0_miim
+                 &gmac0_tx_bus2
+                 &gmac0_rx_bus2
+                 &gmac0_rgmii_clk
+                 &gmac0_rgmii_bus>;
+    tx_delay = <0x3c>;
+    rx_delay = <0x2f>;
+    phy-handle = <&rgmii_phy0>;
+    status = "okay";
+};
+
+&gmac1 {
+    phy-mode = "rgmii";
+    clock_in_out = "output";
+    snps,reset-gpio = <&gpio3 RK_PC0 GPIO_ACTIVE_LOW>;
+    snps,reset-active-low;
+    snps,reset-delays-us = <0 10000 100000>;
+    assigned-clocks = <&cru SCLK_GMAC1_RX_TX>, <&cru SCLK_GMAC1>;
+    assigned-clock-parents = <&cru SCLK_GMAC1_RGMII_SPEED>;
+    pinctrl-names = "default";
+    pinctrl-0 = <&gmac1_miim
+                 &gmac1_tx_bus2
+                 &gmac1_rx_bus2
+                 &gmac1_rgmii_clk
+                 &gmac1_rgmii_bus>;
+    tx_delay = <0x3c>;
+    rx_delay = <0x2f>;
+    phy-handle = <&rgmii_phy1>;
+    status = "okay";
+};
+
+&mdio0 {
+    rgmii_phy0: phy@1 {
+        compatible = "ethernet-phy-ieee802.3-c22";
+        reg = <0x1>;
+        reset-assert-us = <20000>;
+        reset-deassert-us = <100000>;
+        reset-gpios = <&gpio3 RK_PB7 GPIO_ACTIVE_LOW>;
+    };
+};
+
+&mdio1 {
+    rgmii_phy1: phy@1 {
+        compatible = "ethernet-phy-ieee802.3-c22";
+        reg = <0x1>;
+        reset-assert-us = <20000>;
+        reset-deassert-us = <100000>;
+        reset-gpios = <&gpio3 RK_PC0 GPIO_ACTIVE_LOW>;
+    };
+};
+
+/* PCIe for NVMe storage expansion */
+&pcie3x4 {
+    reset-gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
+    vpcie3v3-supply = <&vcc3v3_pcie30>;
+    status = "okay";
+};
+
+&pcie2x1l0 {
+    reset-gpios = <&gpio4 RK_PA5 GPIO_ACTIVE_HIGH>;
+    vpcie3v3-supply = <&vcc3v3_pcie2x1l0>;
+    status = "okay";
+};
+
+&pcie2x1l1 {
+    reset-gpios = <&gpio4 RK_PA6 GPIO_ACTIVE_HIGH>;
+    vpcie3v3-supply = <&vcc3v3_pcie2x1l1>;
+    status = "okay";
+};
+
+&pcie2x1l2 {
+    reset-gpios = <&gpio4 RK_PA7 GPIO_ACTIVE_HIGH>;
+    vpcie3v3-supply = <&vcc3v3_pcie2x1l2>;
+    status = "okay";
+};
+
+/* SATA for storage arrays */
+&sata0 {
+    status = "okay";
+};
+
+&sata1 {
+    status = "okay";
+};
+
+&sata2 {
+    status = "okay";
+};
+
+/* USB 3.0 for external backup drives */
+&usbdrd_dwc3_0 {
+    dr_mode = "host";
+    status = "okay";
+};
+
+&usbdrd3_0 {
+    status = "okay";
+};
+
+&usbdrd_dwc3_1 {
+    dr_mode = "host";
+    status = "okay";
+};
+
+&usbdrd3_1 {
+    status = "okay";
+};
+
+/* Serial console for server management */
+&uart2 {
+    status = "okay";
+};
+
+/* Additional UARTs for serial devices */
+&uart4 {
+    status = "okay";
+    pinctrl-names = "default";
+    pinctrl-0 = <&uart4m0_xfer>;
+};
+
+&uart5 {
+    status = "okay";
+    pinctrl-names = "default";
+    pinctrl-0 = <&uart5m0_xfer>;
+};
+
+/* I2C for server monitoring sensors */
+&i2c1 {
+    status = "okay";
+    
+    /* Temperature sensor */
+    temp_sensor: tmp75@48 {
+        compatible = "ti,tmp75";
+        reg = <0x48>;
+    };
+    
+    /* Voltage/Current monitor */
+    power_monitor: ina226@40 {
+        compatible = "ti,ina226";
+        reg = <0x40>;
+        shunt-resistor = <10000>;
+    };
+};
+
+/* PWM for fan control */
+&pwm0 {
+    status = "okay";
+};
+
+&pwm1 {
+    status = "okay";
+};
+
+/* Fan control for thermal management */
+/ {
+    fan0: pwm-fan {
+        compatible = "pwm-fan";
+        pwms = <&pwm0 0 50000 0>;
+        #cooling-cells = <2>;
+        cooling-levels = <0 64 128 192 255>;
+    };
+    
+    fan1: pwm-fan-1 {
+        compatible = "pwm-fan";
+        pwms = <&pwm1 0 50000 0>;
+        #cooling-cells = <2>;
+        cooling-levels = <0 64 128 192 255>;
+    };
+};
+
+/* Thermal zones for server monitoring */
+&thermal_zones {
+    soc-thermal {
+        polling-delay-passive = <100>;
+        polling-delay = <1000>;
+        
+        trips {
+            soc_alert0: trip-point@0 {
+                temperature = <50000>;
+                hysteresis = <2000>;
+                type = "active";
+            };
+            soc_alert1: trip-point@1 {
+                temperature = <60000>;
+                hysteresis = <2000>;
+                type = "active";
+            };
+            soc_crit: trip-point@2 {
+                temperature = <95000>;
+                hysteresis = <2000>;
+                type = "critical";
+            };
+        };
+        
+        cooling-maps {
+            map0 {
+                trip = <&soc_alert0>;
+                cooling-device = <&fan0 0 1>;
+            };
+            map1 {
+                trip = <&soc_alert1>;
+                cooling-device = <&fan0 1 2>,
+                                <&fan1 1 2>;
+            };
+        };
+    };
+};
+
+/* RTC for time keeping */
+&hym8563 {
+    status = "okay";
+};
+
+/* Disable unused peripherals for power saving */
+&hdmi {
+    status = "disabled";
+};
+
+&hdmi_in_vp0 {
+    status = "disabled";
+};
+
+&hdmiphy {
+    status = "disabled";
+};
+
+&display_subsystem {
+    status = "disabled";
+};
+
+&vop {
+    status = "disabled";
+};
+
+&vop_mmu {
+    status = "disabled";
+};
+
+&gpu {
+    status = "disabled";
+};
+
+/* CPU frequency scaling for power efficiency */
+&cpu_l0 {
+    operating-points-v2 = <&cluster0_opp_table>;
+    cpu-idle-states = <&CPU_SLEEP &CLUSTER_SLEEP>;
+};
+
+&cpu_b0 {
+    operating-points-v2 = <&cluster1_opp_table>;
+    cpu-idle-states = <&CPU_SLEEP &CLUSTER_SLEEP>;
+};
+
+&cpu_b2 {
+    operating-points-v2 = <&cluster2_opp_table>;
+    cpu-idle-states = <&CPU_SLEEP &CLUSTER_SLEEP>;
+};

@@ -1,0 +1,355 @@
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include "rk3588s.dtsi"
+#include "rk3588s-orangepi-5.dtsi"
+
+/ {
+    model = "Orange Pi 5 Plus - GameScope-Pi Gaming Edition";
+    compatible = "xunlong,orangepi-5-plus", "rockchip,rk3588s";
+    
+    metadata {
+        build-type = "gamescope-pi";
+        gpu-driver = "g13p0-valhall";
+        features = "gaming-optimized,low-latency,freesync";
+    };
+
+    chosen {
+        bootargs = "console=ttyS2,1500000n8 root=/dev/mmcblk0p2 rootwait rw quiet splash mitigations=off threadirqs";
+    };
+
+    /* GameScope compositor configuration */
+    gamescope {
+        compatible = "valve,gamescope";
+        default-mode = "720p";
+        target-fps = <60>;
+        
+        /* Steam Deck compatibility mode */
+        steam-deck-mode;
+        
+        /* Display settings */
+        display {
+            adaptive-sync;
+            hdr-enabled;
+            color-gamut = "srgb";
+        };
+        
+        /* Performance settings */
+        performance {
+            compositor-priority = "realtime";
+            gpu-priority = "high";
+            low-latency-mode;
+        };
+    };
+
+    /* Memory configuration for gaming */
+    reserved-memory {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+
+        /* Large CMA for GPU operations */
+        linux,cma {
+            compatible = "shared-dma-pool";
+            reusable;
+            size = <0x0 0x80000000>; /* 2GB for gaming */
+            alignment = <0x0 0x400000>;
+            linux,cma-default;
+        };
+
+        /* GPU dedicated memory */
+        gpu_reserved: gpu@e0000000 {
+            reg = <0x0 0xe0000000 0x0 0x20000000>; /* 512MB */
+            no-map;
+        };
+    };
+};
+
+/* High-performance CPU configuration */
+&cluster0_opp_table {
+    /* Boost little cores for better responsiveness */
+    opp-2016000000 {
+        opp-hz = /bits/ 64 <2016000000>;
+        opp-microvolt = <1000000>;
+        clock-latency-ns = <40000>;
+    };
+};
+
+&cluster1_opp_table {
+    /* Boost big cores for gaming performance */
+    opp-2400000000 {
+        opp-hz = /bits/ 64 <2400000000>;
+        opp-microvolt = <1050000>;
+        clock-latency-ns = <40000>;
+    };
+    
+    opp-2600000000 {
+        opp-hz = /bits/ 64 <2600000000>;
+        opp-microvolt = <1100000>;
+        clock-latency-ns = <40000>;
+        turbo-mode;
+    };
+};
+
+/* Mali G610 GPU with gaming optimizations */
+&gpu {
+    compatible = "arm,mali-g610", "arm,mali-valhall";
+    mali-supply = <&vdd_gpu_s0>;
+    operating-points-v2 = <&gpu_gaming_opp_table>;
+    status = "okay";
+    
+    /* Gaming-optimized scheduler */
+    mali,scheduler = "performance";
+    mali,power-policy = "always-on";
+    
+    /* Enable all GPU cores */
+    mali,core-mask = <0xf>;
+    
+    gpu_gaming_opp_table: opp-table {
+        compatible = "operating-points-v2";
+        
+        opp-300000000 {
+            opp-hz = /bits/ 64 <300000000>;
+            opp-microvolt = <675000>;
+        };
+        opp-500000000 {
+            opp-hz = /bits/ 64 <500000000>;
+            opp-microvolt = <700000>;
+        };
+        opp-700000000 {
+            opp-hz = /bits/ 64 <700000000>;
+            opp-microvolt = <800000>;
+        };
+        opp-900000000 {
+            opp-hz = /bits/ 64 <900000000>;
+            opp-microvolt = <900000>;
+        };
+        opp-1000000000 {
+            opp-hz = /bits/ 64 <1000000000>;
+            opp-microvolt = <950000>;
+        };
+        /* Overclocked frequencies for gaming */
+        opp-1100000000 {
+            opp-hz = /bits/ 64 <1100000000>;
+            opp-microvolt = <1000000>;
+            turbo-mode;
+        };
+        opp-1200000000 {
+            opp-hz = /bits/ 64 <1200000000>;
+            opp-microvolt = <1050000>;
+            turbo-mode;
+        };
+    };
+};
+
+/* Display configuration for gaming */
+&hdmi {
+    status = "okay";
+    
+    /* Gaming display features */
+    rockchip,hdmi21-frl-support;
+    rockchip,4k120-support;
+    rockchip,vrr-support; /* Variable Refresh Rate */
+    rockchip,allm-support; /* Auto Low Latency Mode */
+    rockchip,qft-support; /* Quick Frame Transport */
+    rockchip,qms-support; /* Quick Media Switching */
+};
+
+&hdmi_in_vp0 {
+    status = "okay";
+};
+
+&hdmiphy {
+    status = "okay";
+};
+
+&display_subsystem {
+    status = "okay";
+    
+    /* Gaming-specific display settings */
+    rockchip,prefer-async-commit;
+    rockchip,low-latency-mode;
+};
+
+&vop {
+    status = "okay";
+    
+    /* High refresh rate support */
+    assigned-clocks = <&cru DCLK_VOP0>, <&cru DCLK_VOP1>;
+    assigned-clock-rates = <594000000>, <594000000>; /* 4K@120Hz capable */
+};
+
+/* PCIe for external GPU or NVMe storage */
+&pcie3x4 {
+    reset-gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
+    vpcie3v3-supply = <&vcc3v3_pcie30>;
+    status = "okay";
+    
+    /* Gaming SSD optimizations */
+    max-link-speed = <3>;
+    num-lanes = <4>;
+    linux,pci-probe-only;
+};
+
+/* USB for gaming peripherals */
+&usbdrd_dwc3_0 {
+    dr_mode = "host";
+    maximum-speed = "super-speed";
+    phys = <&u2phy0_otg>, <&usbdp_phy0_u3>;
+    phy-names = "usb2-phy", "usb3-phy";
+    status = "okay";
+};
+
+&usbdrd3_0 {
+    status = "okay";
+};
+
+&usbdrd_dwc3_1 {
+    dr_mode = "host";
+    maximum-speed = "super-speed";
+    phys = <&u2phy1_otg>, <&usbdp_phy1_u3>;
+    phy-names = "usb2-phy", "usb3-phy";
+    status = "okay";
+};
+
+&usbdrd3_1 {
+    status = "okay";
+};
+
+/* Audio for gaming headsets */
+&i2s0_8ch {
+    status = "okay";
+    
+    /* Low latency audio configuration */
+    rockchip,sample-rate = <48000>;
+    rockchip,channels = <2>;
+    rockchip,bit-depth = <24>;
+    rockchip,low-latency;
+};
+
+/* Fan control for cooling during gaming */
+&pwm1 {
+    status = "okay";
+};
+
+/ {
+    fan0: pwm-fan {
+        compatible = "pwm-fan";
+        pwms = <&pwm1 0 50000 0>;
+        #cooling-cells = <2>;
+        /* Aggressive cooling for gaming */
+        cooling-levels = <0 100 150 200 255>;
+        
+        /* Custom fan curve for gaming */
+        trips {
+            fan_on: trip-point@0 {
+                temperature = <50000>;
+                hysteresis = <2000>;
+            };
+            fan_med: trip-point@1 {
+                temperature = <60000>;
+                hysteresis = <2000>;
+            };
+            fan_high: trip-point@2 {
+                temperature = <70000>;
+                hysteresis = <2000>;
+            };
+            fan_max: trip-point@3 {
+                temperature = <80000>;
+                hysteresis = <2000>;
+            };
+        };
+    };
+};
+
+/* Thermal configuration for sustained gaming */
+&tsadc {
+    status = "okay";
+};
+
+&thermal_zones {
+    soc-thermal {
+        polling-delay-passive = <100>;
+        polling-delay = <1000>;
+        
+        trips {
+            /* Higher thermal limits for gaming */
+            soc_alert: trip-point@0 {
+                temperature = <85000>;
+                hysteresis = <2000>;
+                type = "passive";
+            };
+            soc_crit: trip-point@1 {
+                temperature = <95000>;
+                hysteresis = <2000>;
+                type = "critical";
+            };
+        };
+        
+        cooling-maps {
+            map0 {
+                trip = <&soc_alert>;
+                cooling-device = <&fan0 2 3>;
+            };
+            map1 {
+                trip = <&soc_alert>;
+                cooling-device = <&cpu_l0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+            };
+        };
+    };
+};
+
+/* Network for online gaming */
+&gmac0 {
+    phy-mode = "rgmii";
+    clock_in_out = "output";
+    
+    assigned-clocks = <&cru SCLK_GMAC0_RX_TX>, <&cru SCLK_GMAC0>;
+    assigned-clock-parents = <&cru SCLK_GMAC0_RGMII_SPEED>;
+    assigned-clock-rates = <0>, <125000000>;
+    
+    pinctrl-names = "default";
+    pinctrl-0 = <&gmac0_pins>;
+    
+    tx_delay = <0x3c>;
+    rx_delay = <0x2f>;
+    
+    phy-handle = <&rgmii_phy0>;
+    status = "okay";
+    
+    /* Low latency network settings */
+    snps,txpbl = <0x4>;
+    snps,rxpbl = <0x4>;
+    snps,aal;
+    snps,tso;
+};
+
+/* RGB lighting control */
+&i2c3 {
+    status = "okay";
+    
+    rgb_controller: led-controller@60 {
+        compatible = "issi,is31fl3731";
+        reg = <0x60>;
+        
+        /* Gaming RGB effects */
+        led@0 {
+            reg = <0>;
+            label = "gaming:rgb:effect";
+            linux,default-trigger = "heartbeat";
+        };
+    };
+};
+
+/* Performance monitoring */
+/ {
+    performance-monitor {
+        compatible = "rockchip,rk3588-performance";
+        
+        /* Monitor gaming performance */
+        rockchip,monitor-cpu;
+        rockchip,monitor-gpu;
+        rockchip,monitor-ddr;
+        rockchip,monitor-thermal;
+    };
+};

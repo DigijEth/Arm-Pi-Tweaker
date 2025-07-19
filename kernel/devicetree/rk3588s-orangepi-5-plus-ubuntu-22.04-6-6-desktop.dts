@@ -1,0 +1,137 @@
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include "rk3588s.dtsi"
+#include "rk3588s-orangepi-5.dtsi"
+
+/ {
+    model = "Orange Pi 5 Plus - ubuntu 22.04 - Kernel 6.6 - Desktop/Server";
+    compatible = "xunlong,orangepi-5-plus", "rockchip,rk3588s";
+
+    memory@0 {
+        device_type = "memory";
+        reg = <0x0 0x00000000 0x0 0x80000000>,
+              <0x0 0x100000000 0x1 0x80000000>;
+    };
+
+    reserved-memory {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+
+        /* Reserve 256MB for CMA (Desktop/Server) */
+        linux,cma {
+            compatible = "shared-dma-pool";
+            reusable;
+            size = <0x0 0x10000000>;
+            linux,cma-default;
+        };
+    };
+
+};
+
+&gpu {
+    status = "okay";
+    mali-supply = <&vdd_gpu_s0>;
+    operating-points-v2 = <&gpu_opp_table_custom>;
+    /* Mali proprietary driver configuration */
+    mali,power-policy = "coarse_demand";
+    mali,js-scheduling-period = <100>;
+    mali,shader-present = <0xff>;
+    mali,tiler-present = <0x1>;
+    mali,l2-present = <0xf>;
+};
+
+gpu_opp_table_custom: opp-table-gpu {
+    compatible = "operating-points-v2";
+    opp-shared;
+
+    opp-300000000 {
+        opp-hz = /bits/ 64 <300000000>;
+        opp-microvolt = <675000>;
+    };
+
+    opp-600000000 {
+        opp-hz = /bits/ 64 <600000000>;
+        opp-microvolt = <750000>;
+    };
+
+    opp-800000000 {
+        opp-hz = /bits/ 64 <800000000>;
+        opp-microvolt = <850000>;
+    };
+
+};
+
+/* AV1 Hardware Decoder Configuration */
+/* Required by RKMPP AV1 hardware decoding in Chromium, FFmpeg and Gstreamer */
+&av1d {
+    status = "okay";
+};
+
+/* Desktop/Server Configuration */
+&hdmi0 {
+    status = "okay";
+    pinctrl-names = "default";
+    pinctrl-0 = <&hdmim0_tx0_cec &hdmim0_tx0_hpd &hdmim0_tx0_scl &hdmim0_tx0_sda>;
+};
+
+&hdmi0_in_vp0 {
+    status = "okay";
+};
+
+&route_hdmi0 {
+    status = "okay";
+};
+
+&dp0 {
+    status = "okay";
+    pinctrl-names = "default";
+    pinctrl-0 = <&dp0m2_pins>;
+};
+
+&dp0_in_vp2 {
+    status = "okay";
+};
+
+/* USB Configuration */
+&usb_host0_ehci {
+    status = "okay";
+};
+
+&usb_host0_ohci {
+    status = "okay";
+};
+
+&usb_host1_ehci {
+    status = "okay";
+};
+
+&usb_host1_ohci {
+    status = "okay";
+};
+
+/* Ethernet Configuration */
+&gmac1 {
+    status = "okay";
+    phy-mode = "rgmii";
+    clock_in_out = "output";
+    tx_delay = <0x43>;
+    rx_delay = <0x43>;
+};
+
+/* I2C Configuration */
+&i2c0 {
+    status = "okay";
+};
+
+&i2c2 {
+    status = "okay";
+};
+
+/* SPI Configuration */
+&spi2 {
+    status = "okay";
+    max-freq = <50000000>;
+};
+

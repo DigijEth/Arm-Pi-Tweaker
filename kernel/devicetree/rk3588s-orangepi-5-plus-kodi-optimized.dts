@@ -1,0 +1,304 @@
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include "rk3588s.dtsi"
+#include "rk3588s-orangepi-5.dtsi"
+
+/ {
+    model = "Orange Pi 5 Plus - Kodi Media Center Optimized";
+    compatible = "xunlong,orangepi-5-plus", "rockchip,rk3588s";
+    
+    metadata {
+        build-type = "kodi-media-center";
+        optimization = "media-playback";
+        features = "hdr10,av1-decode,hevc-10bit";
+    };
+
+    chosen {
+        bootargs = "console=ttyS2,1500000n8 root=/dev/mmcblk0p2 rootwait rw quiet loglevel=3 plymouth.enable=0";
+    };
+
+    /* Kodi specific memory reservations */
+    reserved-memory {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+
+        /* CMA pool for video decoding */
+        linux,cma {
+            compatible = "shared-dma-pool";
+            reusable;
+            size = <0x0 0x40000000>; /* 1GB for 4K video buffers */
+            alignment = <0x0 0x400000>;
+            linux,cma-default;
+        };
+
+        /* Reserved for GPU */
+        gpu_reserved: gpu@f8000000 {
+            reg = <0x0 0xf8000000 0x0 0x8000000>; /* 128MB */
+            no-map;
+        };
+    };
+};
+
+/* Video decoder configurations for Kodi */
+&vdec {
+    compatible = "rockchip,rk3588-vdec";
+    status = "okay";
+    
+    /* Enable all video codecs */
+    rockchip,h264-decoder;
+    rockchip,h265-decoder;
+    rockchip,vp9-decoder;
+    rockchip,av1-decoder;
+    
+    /* 4K@60fps decoding support */
+    rockchip,max-width = <3840>;
+    rockchip,max-height = <2160>;
+    rockchip,max-fps = <60>;
+};
+
+/* HEVC/H.265 10-bit decoder */
+&hevc_decoder {
+    compatible = "rockchip,rk3588-hevc-decoder";
+    reg = <0x0 0xfdb50000 0x0 0x400>,
+          <0x0 0xfdb90000 0x0 0x400>;
+    interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
+    clocks = <&cru ACLK_HEVC>, <&cru PCLK_HEVC>;
+    clock-names = "aclk", "pclk";
+    resets = <&cru SRST_A_HEVC>, <&cru SRST_P_HEVC>;
+    reset-names = "axi", "ahb";
+    power-domains = <&power RK3588_PD_HEVC>;
+    status = "okay";
+    
+    /* 10-bit support */
+    rockchip,10bit-support;
+    rockchip,hdr10-support;
+};
+
+/* AV1 decoder for latest codecs */
+&av1_decoder {
+    compatible = "rockchip,rk3588-av1-decoder";
+    reg = <0x0 0xfdb70000 0x0 0x800>;
+    interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>;
+    clocks = <&cru ACLK_AV1>, <&cru PCLK_AV1>;
+    clock-names = "aclk", "pclk";
+    resets = <&cru SRST_A_AV1>, <&cru SRST_P_AV1>;
+    reset-names = "axi", "ahb";
+    power-domains = <&power RK3588_PD_AV1>;
+    status = "okay";
+    
+    /* Netflix/Amazon Prime compatibility */
+    rockchip,secure-decode;
+};
+
+/* VP9 decoder for YouTube/WebM */
+&vp9_decoder {
+    compatible = "rockchip,rk3588-vp9-decoder";
+    status = "okay";
+    rockchip,10bit-support;
+};
+
+/* GPU configuration optimized for Kodi GUI */
+&gpu {
+    compatible = "arm,mali-g610", "arm,mali-valhall";
+    mali-supply = <&vdd_gpu_s0>;
+    operating-points-v2 = <&gpu_opp_table>;
+    status = "okay";
+    
+    /* Power-efficient OPP table for media playback */
+    gpu_opp_table: opp-table {
+        compatible = "operating-points-v2";
+        
+        opp-200000000 {
+            opp-hz = /bits/ 64 <200000000>;
+            opp-microvolt = <650000>;
+        };
+        opp-300000000 {
+            opp-hz = /bits/ 64 <300000000>;
+            opp-microvolt = <675000>;
+        };
+        opp-400000000 {
+            opp-hz = /bits/ 64 <400000000>;
+            opp-microvolt = <700000>;
+        };
+        opp-600000000 {
+            opp-hz = /bits/ 64 <600000000>;
+            opp-microvolt = <750000>;
+        };
+    };
+};
+
+/* HDMI output for TV connection */
+&hdmi {
+    status = "okay";
+    pinctrl-names = "default";
+    pinctrl-0 = <&hdmi_pins>;
+    
+    /* HDMI 2.1 features */
+    rockchip,hdmi21-support;
+    rockchip,4k60-support;
+    rockchip,hdr10-support;
+    rockchip,dolby-vision-support;
+};
+
+&hdmi_in_vp0 {
+    status = "okay";
+};
+
+&hdmiphy {
+    status = "okay";
+};
+
+&hdmi_sound {
+    status = "okay";
+    
+    /* Audio passthrough for Kodi */
+    rockchip,passthrough-support;
+    rockchip,dts-support;
+    rockchip,dolby-support;
+};
+
+/* Display subsystem */
+&display_subsystem {
+    status = "okay";
+};
+
+&vop {
+    status = "okay";
+    assigned-clocks = <&cru DCLK_VOP0>;
+    assigned-clock-rates = <594000000>; /* 4K@60Hz pixel clock */
+};
+
+&vop_mmu {
+    status = "okay";
+};
+
+/* Audio configuration for Kodi */
+&i2s0_8ch {
+    status = "okay";
+    
+    /* High quality audio settings */
+    rockchip,sample-rate = <192000>;
+    rockchip,channels = <8>;
+    rockchip,bit-depth = <32>;
+};
+
+/* IR receiver for remote control */
+&pwm3 {
+    status = "okay";
+    pinctrl-names = "default";
+    pinctrl-0 = <&pwm3_ir>;
+};
+
+/ {
+    ir_recv: ir-receiver {
+        compatible = "gpio-ir-receiver";
+        gpios = <&gpio0 RK_PD4 GPIO_ACTIVE_LOW>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&ir_int>;
+        linux,rc-map-name = "rc-kodi";
+    };
+};
+
+/* USB for external storage */
+&usb_host0_ehci {
+    status = "okay";
+};
+
+&usb_host0_ohci {
+    status = "okay";
+};
+
+&usb_host1_ehci {
+    status = "okay";
+};
+
+&usb_host1_ohci {
+    status = "okay";
+};
+
+&usb_host2_xhci {
+    dr_mode = "host";
+    status = "okay";
+};
+
+/* SD card for media storage */
+&sdmmc {
+    bus-width = <4>;
+    cap-sd-highspeed;
+    cd-gpios = <&gpio0 RK_PA4 GPIO_ACTIVE_LOW>;
+    disable-wp;
+    max-frequency = <150000000>;
+    no-sdio;
+    no-mmc;
+    sd-uhs-sdr104;
+    vmmc-supply = <&vcc_3v3_sd>;
+    vqmmc-supply = <&vccio_sd_s0>;
+    status = "okay";
+};
+
+/* Gigabit ethernet for streaming */
+&gmac0 {
+    phy-mode = "rgmii";
+    clock_in_out = "output";
+    
+    assigned-clocks = <&cru SCLK_GMAC0_RX_TX>, <&cru SCLK_GMAC0>;
+    assigned-clock-parents = <&cru SCLK_GMAC0_RGMII_SPEED>;
+    assigned-clock-rates = <0>, <125000000>;
+    
+    pinctrl-names = "default";
+    pinctrl-0 = <&gmac0_pins>;
+    
+    tx_delay = <0x3c>;
+    rx_delay = <0x2f>;
+    
+    phy-handle = <&rgmii_phy0>;
+    status = "okay";
+};
+
+&mdio0 {
+    rgmii_phy0: ethernet-phy@1 {
+        compatible = "ethernet-phy-ieee802.3-c22";
+        reg = <0x1>;
+        reset-assert-us = <20000>;
+        reset-deassert-us = <100000>;
+        reset-gpios = <&gpio3 RK_PB2 GPIO_ACTIVE_LOW>;
+    };
+};
+
+/* Thermal management for quiet operation */
+&tsadc {
+    status = "okay";
+};
+
+&thermal_zones {
+    soc-thermal {
+        polling-delay-passive = <1000>;
+        polling-delay = <5000>;
+        
+        trips {
+            soc_passive: trip-point@0 {
+                temperature = <70000>;
+                hysteresis = <2000>;
+                type = "passive";
+            };
+        };
+        
+        cooling-maps {
+            map0 {
+                trip = <&soc_passive>;
+                cooling-device = <&cpu_l0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+                               <&cpu_b0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+                               <&cpu_b2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+            };
+        };
+    };
+};
+
+/* CEC for TV control */
+&hdmi_cec {
+    status = "okay";
+    pinctrl-names = "default";
+    pinctrl-0 = <&hdmi_cec_pins>;
+};

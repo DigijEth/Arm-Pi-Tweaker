@@ -1,0 +1,187 @@
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include "rk3588s.dtsi"
+#include "rk3588s-orangepi-5.dtsi"
+
+/ {
+    model = "Orange Pi 5 Plus - ubuntu-22.04 6.11 - GameScope Gaming";
+    compatible = "xunlong,orangepi-5-plus", "rockchip,rk3588s";
+    
+    metadata {
+        build-type = "gamescope-pi";
+        kernel-version = "6.11";
+        distro-name = "ubuntu";
+        distro-version = "22.04";
+        gpu-driver = "valhall-g610";
+        features = "gaming-optimized,low-latency,freesync";
+    };
+
+    chosen {
+        bootargs = "console=ttyS2,1500000n8 root=/dev/mmcblk0p2 rootwait rw quiet splash mitigations=off threadirqs";
+    };
+
+    gamescope {
+        compatible = "valve,gamescope";
+        default-mode = "720p";
+        target-fps = <60>;
+        steam-deck-mode;
+        
+        display {
+            adaptive-sync;
+            hdr-enabled;
+            color-gamut = "srgb";
+        };
+        
+        performance {
+            compositor-priority = "realtime";
+            gpu-priority = "high";
+            low-latency-mode;
+        };
+    };
+
+    reserved-memory {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+
+        linux,cma {
+            compatible = "shared-dma-pool";
+            reusable;
+            size = <0x0 0x80000000>; /* 2GB for gaming */
+            alignment = <0x0 0x400000>;
+            linux,cma-default;
+        };
+    };
+};
+
+/* High-performance CPU */
+&cluster0_opp_table {
+    opp-2016000000 {
+        opp-hz = /bits/ 64 <2016000000>;
+        opp-microvolt = <1000000>;
+        clock-latency-ns = <40000>;
+    };
+};
+
+&cluster1_opp_table {
+    opp-2400000000 {
+        opp-hz = /bits/ 64 <2400000000>;
+        opp-microvolt = <1050000>;
+        clock-latency-ns = <40000>;
+    };
+    
+    opp-2600000000 {
+        opp-hz = /bits/ 64 <2600000000>;
+        opp-microvolt = <1100000>;
+        clock-latency-ns = <40000>;
+        turbo-mode;
+    };
+};
+
+/* Gaming GPU configuration */
+&gpu {
+    status = "okay";
+    mali,scheduler = "performance";
+    mali,power-policy = "always-on";
+    mali,core-mask = <0xf>;
+    operating-points-v2 = <&gpu_gaming_opp_table>;
+    
+    gpu_gaming_opp_table: opp-table {
+        compatible = "operating-points-v2";
+        
+        opp-500000000 {
+            opp-hz = /bits/ 64 <500000000>;
+            opp-microvolt = <700000>;
+        };
+        opp-800000000 {
+            opp-hz = /bits/ 64 <800000000>;
+            opp-microvolt = <850000>;
+        };
+        opp-1000000000 {
+            opp-hz = /bits/ 64 <1000000000>;
+            opp-microvolt = <950000>;
+        };
+        opp-1200000000 {
+            opp-hz = /bits/ 64 <1200000000>;
+            opp-microvolt = <1050000>;
+            turbo-mode;
+        };
+    };
+};
+
+/* Gaming display */
+&hdmi {
+    status = "okay";
+    rockchip,hdmi21-frl-support;
+    rockchip,4k120-support;
+    rockchip,vrr-support;
+    rockchip,allm-support;
+    rockchip,qft-support;
+};
+
+&display_subsystem {
+    status = "okay";
+    rockchip,prefer-async-commit;
+    rockchip,low-latency-mode;
+};
+
+/* PCIe for GPU/NVMe */
+&pcie3x4 {
+    status = "okay";
+    max-link-speed = <3>;
+    num-lanes = <4>;
+};
+
+/* USB for gaming peripherals */
+&usbdrd_dwc3_0 {
+    dr_mode = "host";
+    maximum-speed = "super-speed";
+    status = "okay";
+};
+
+&usbdrd3_0 {
+    status = "okay";
+};
+
+/* Low latency audio */
+&i2s0_8ch {
+    status = "okay";
+    rockchip,sample-rate = <48000>;
+    rockchip,channels = <2>;
+    rockchip,bit-depth = <24>;
+    rockchip,low-latency;
+};
+
+/* Network for online gaming */
+&gmac0 {
+    status = "okay";
+    snps,txpbl = <0x4>;
+    snps,rxpbl = <0x4>;
+    snps,aal;
+    snps,tso;
+};
+
+/* Fan control */
+&pwm1 {
+    status = "okay";
+};
+
+/ {
+    fan0: pwm-fan {
+        compatible = "pwm-fan";
+        pwms = <&pwm1 0 50000 0>;
+        #cooling-cells = <2>;
+        cooling-levels = <0 100 150 200 255>;
+    };
+};
+
+/* Common peripherals */
+&uart2 {
+    status = "okay";
+};
+
+&tsadc {
+    status = "okay";
+};
+

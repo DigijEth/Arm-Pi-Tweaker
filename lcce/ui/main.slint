@@ -1,0 +1,445 @@
+import { Button, VerticalBox, HorizontalBox, ListView, StandardListView, GroupBox, TabWidget, ScrollView, LineEdit, ComboBox, CheckBox, SpinBox, ProgressIndicator, AboutSlint } from "std-widgets.slint";
+
+// Custom components
+component MenuCard inherits Rectangle {
+    in property <string> title;
+    in property <string> description;
+    in property <string> icon;
+    in property <bool> enabled: true;
+    callback clicked;
+    
+    border-radius: 8px;
+    background: enabled ? #f8f9fa : #e9ecef;
+    border-width: 2px;
+    border-color: enabled ? #007bff : #6c757d;
+    drop-shadow-blur: 4px;
+    drop-shadow-color: #00000020;
+    
+    states [
+        hover when ta.has-hover : {
+            background: #e7f3ff;
+            border-color: #0056b3;
+        }
+        pressed when ta.pressed : {
+            background: #cce7ff;
+        }
+    ]
+    
+    ta := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+    
+    VerticalBox {
+        padding: 16px;
+        alignment: center;
+        
+        HorizontalBox {
+            alignment: center;
+            
+            Text {
+                text: icon;
+                font-size: 32px;
+                color: enabled ? #007bff : #6c757d;
+                horizontal-alignment: center;
+            }
+        }
+        
+        Text {
+            text: title;
+            font-size: 18px;
+            font-weight: 700;
+            color: enabled ? #212529 : #6c757d;
+            horizontal-alignment: center;
+        }
+        
+        Text {
+            text: description;
+            font-size: 12px;
+            color: enabled ? #6c757d : #adb5bd;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+    }
+}
+
+// Status bar component
+component StatusBar inherits Rectangle {
+    in property <string> status-text: "Ready";
+    in property <string> device-info: "Orange Pi 5 Plus";
+    in property <float> progress: 0.0;
+    in property <bool> show-progress: false;
+    
+    height: 40px;
+    background: #343a40;
+    
+    HorizontalBox {
+        padding: 8px;
+        alignment: space-between;
+        
+        HorizontalBox {
+            alignment: start;
+            spacing: 16px;
+            
+            Text {
+                text: "🔧 " + device-info;
+                color: #ffffff;
+                font-size: 12px;
+                vertical-alignment: center;
+            }
+            
+            Text {
+                text: status-text;
+                color: #ffffff;
+                font-size: 12px;
+                vertical-alignment: center;
+            }
+        }
+        
+        HorizontalBox {
+            alignment: end;
+            
+            if show-progress: ProgressIndicator {
+                width: 100px;
+                progress: root.progress;
+            }
+        }
+    }
+}
+
+// Main application window
+export component MainWindow inherits Window {
+    title: "Arm-Pi Tweaker: Live Custom Creation Edition";
+    width: 1200px;
+    height: 800px;
+    icon: @image-url("../assets/icon.png");
+    
+    // Properties for communication with Rust
+    in-out property <string> current-status: "Initializing LCCE...";
+    in-out property <string> device-name: "Orange Pi 5 Plus";
+    in-out property <bool> installation-in-progress: false;
+    in-out property <float> installation-progress: 0.0;
+    
+    // Callbacks for Rust backend
+    callback show-kernel-module();
+    callback show-video-driver-module();
+    callback show-emulation-module();
+    callback show-armpi-tweaker-module();
+    callback show-storage-module();
+    callback show-about-dialog();
+    callback quit-application();
+    
+    // Main layout
+    VerticalBox {
+        // Header
+        Rectangle {
+            height: 80px;
+            background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+            
+            HorizontalBox {
+                padding: 16px;
+                alignment: space-between;
+                
+                HorizontalBox {
+                    alignment: start;
+                    spacing: 16px;
+                    
+                    Text {
+                        text: "🚀";
+                        font-size: 32px;
+                        color: #ffffff;
+                        vertical-alignment: center;
+                    }
+                    
+                    VerticalBox {
+                        alignment: center;
+                        spacing: 4px;
+                        
+                        Text {
+                            text: "Arm-Pi Tweaker: Live Custom Creation Edition";
+                            font-size: 20px;
+                            font-weight: 700;
+                            color: #ffffff;
+                        }
+                        
+                        Text {
+                            text: "Create custom Orange Pi 5 Plus installations with live modifications";
+                            font-size: 12px;
+                            color: #ccddff;
+                        }
+                    }
+                }
+                
+                HorizontalBox {
+                    alignment: end;
+                    spacing: 8px;
+                    
+                    Button {
+                        text: "About";
+                        clicked => { show-about-dialog(); }
+                    }
+                    
+                    Button {
+                        text: "Exit";
+                        clicked => { quit-application(); }
+                    }
+                }
+            }
+        }
+        
+        // Main content area
+        TabWidget {
+            // Main modules tab
+            Tab {
+                title: "Custom Creation";
+                
+                ScrollView {
+                    VerticalBox {
+                        padding: 24px;
+                        spacing: 24px;
+                        
+                        // Title section
+                        Text {
+                            text: "Live Custom Creation Modules";
+                            font-size: 24px;
+                            font-weight: 700;
+                            color: #212529;
+                            horizontal-alignment: center;
+                        }
+                        
+                        Text {
+                            text: "Install your current SD card system to NVMe/eMMC storage with custom modifications";
+                            font-size: 14px;
+                            color: #6c757d;
+                            horizontal-alignment: center;
+                            wrap: word-wrap;
+                        }
+                        
+                        // Core modules grid
+                        GroupBox {
+                            title: "Core Customization Modules";
+                            
+                            GridLayout {
+                                spacing: 16px;
+                                
+                                MenuCard {
+                                    row: 0;
+                                    col: 0;
+                                    title: "Kernel Modifications";
+                                    description: "Customize kernel version, modules, device tree, and boot parameters";
+                                    icon: "🐧";
+                                    clicked => { show-kernel-module(); }
+                                }
+                                
+                                MenuCard {
+                                    row: 0;
+                                    col: 1;
+                                    title: "Video Drivers";
+                                    description: "Configure GPU drivers, MPP acceleration, and graphics settings";
+                                    icon: "🎮";
+                                    clicked => { show-video-driver-module(); }
+                                }
+                                
+                                MenuCard {
+                                    row: 1;
+                                    col: 0;
+                                    title: "Emulation & Multimedia";
+                                    description: "Install Kodi, RetroPie, EmulationStation, and media frontends";
+                                    icon: "🎬";
+                                    clicked => { show-emulation-module(); }
+                                }
+                                
+                                MenuCard {
+                                    row: 1;
+                                    col: 1;
+                                    title: "Storage Installation";
+                                    description: "Install current system to NVMe/eMMC with customizations";
+                                    icon: "💾";
+                                    clicked => { show-storage-module(); }
+                                }
+                            }
+                        }
+                        
+                        // Arm-Pi Tweaker integration
+                        GroupBox {
+                            title: "Advanced Configuration";
+                            
+                            MenuCard {
+                                title: "Arm-Pi Tweaker Suite";
+                                description: "Complete system configuration, performance tuning, and management tools";
+                                icon: "🔧";
+                                clicked => { show-armpi-tweaker-module(); }
+                            }
+                        }
+                        
+                        // Current system info
+                        GroupBox {
+                            title: "Current System Information";
+                            
+                            GridLayout {
+                                spacing: 12px;
+                                
+                                Text {
+                                    row: 0;
+                                    col: 0;
+                                    text: "Device:";
+                                    font-weight: 600;
+                                }
+                                Text {
+                                    row: 0;
+                                    col: 1;
+                                    text: device-name;
+                                }
+                                
+                                Text {
+                                    row: 1;
+                                    col: 0;
+                                    text: "Source Storage:";
+                                    font-weight: 600;
+                                }
+                                Text {
+                                    row: 1;
+                                    col: 1;
+                                    text: "MicroSD Card (/dev/mmcblk1)";
+                                }
+                                
+                                Text {
+                                    row: 2;
+                                    col: 0;
+                                    text: "Target Storage:";
+                                    font-weight: 600;
+                                }
+                                Text {
+                                    row: 2;
+                                    col: 1;
+                                    text: "NVMe SSD (/dev/nvme0n1) or eMMC (/dev/mmcblk0)";
+                                }
+                                
+                                Text {
+                                    row: 3;
+                                    col: 0;
+                                    text: "Current Kernel:";
+                                    font-weight: 600;
+                                }
+                                Text {
+                                    row: 3;
+                                    col: 1;
+                                    text: "Linux 6.1.75-rockchip-rk3588";
+                                }
+                                
+                                Text {
+                                    row: 4;
+                                    col: 0;
+                                    text: "GPU Driver:";
+                                    font-weight: 600;
+                                }
+                                Text {
+                                    row: 4;
+                                    col: 1;
+                                    text: "Mali G610 (Detected)";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Installation progress tab
+            Tab {
+                title: "Installation";
+                enabled: installation-in-progress;
+                
+                VerticalBox {
+                    padding: 24px;
+                    spacing: 24px;
+                    alignment: center;
+                    
+                    Text {
+                        text: "Custom Installation in Progress";
+                        font-size: 24px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                    }
+                    
+                    ProgressIndicator {
+                        width: 400px;
+                        height: 20px;
+                        progress: installation-progress;
+                    }
+                    
+                    Text {
+                        text: "Progress: " + Math.round(installation-progress * 100) + "%";
+                        font-size: 16px;
+                        horizontal-alignment: center;
+                    }
+                    
+                    Text {
+                        text: current-status;
+                        font-size: 14px;
+                        color: #6c757d;
+                        horizontal-alignment: center;
+                    }
+                    
+                    GroupBox {
+                        title: "Installation Steps";
+                        width: 600px;
+                        
+                        VerticalBox {
+                            spacing: 8px;
+                            
+                            Text { text: "✅ 1. System analysis and validation"; }
+                            Text { text: "✅ 2. Kernel customization"; }
+                            Text { text: "🔄 3. Video driver configuration"; }
+                            Text { text: "⏳ 4. Multimedia setup"; }
+                            Text { text: "⏳ 5. Storage preparation"; }
+                            Text { text: "⏳ 6. System installation"; }
+                            Text { text: "⏳ 7. Final configuration"; }
+                        }
+                    }
+                }
+            }
+            
+            // System logs tab
+            Tab {
+                title: "Logs";
+                
+                VerticalBox {
+                    padding: 16px;
+                    
+                    Text {
+                        text: "System Logs";
+                        font-size: 18px;
+                        font-weight: 700;
+                    }
+                    
+                    ScrollView {
+                        height: 500px;
+                        
+                        Rectangle {
+                            background: #f8f9fa;
+                            border-width: 1px;
+                            border-color: #dee2e6;
+                            
+                            Text {
+                                text: "[INFO] LCCE initialized successfully\n[INFO] Orange Pi 5 Plus detected\n[INFO] Source: /dev/mmcblk1 (64GB MicroSD)\n[INFO] Available targets: /dev/nvme0n1, /dev/mmcblk0\n[INFO] Current kernel: 6.1.75-rockchip-rk3588\n[INFO] GPU: Mali-G610 detected\n[INFO] Ready for customization";
+                                font-family: "monospace";
+                                font-size: 12px;
+                                color: #495057;
+                                x: 8px;
+                                y: 8px;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Status bar
+        StatusBar {
+            status-text: current-status;
+            device-info: device-name;
+            progress: installation-progress;
+            show-progress: installation-in-progress;
+        }
+    }
+}

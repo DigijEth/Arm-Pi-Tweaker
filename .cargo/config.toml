@@ -1,0 +1,16 @@
+[build]
+# Use mold linker for faster linking
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+[target.aarch64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=mold", "--target=aarch64-unknown-linux-gnu"]
+
+# Enable incremental compilation for faster rebuilds
+[env]
+CARGO_INCREMENTAL = "1"
+RUSTC_WRAPPER = "sccache"

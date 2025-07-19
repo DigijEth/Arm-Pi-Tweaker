@@ -1,0 +1,232 @@
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include "rk3588s.dtsi"
+#include "rk3588s-orangepi-5.dtsi"
+
+/ {
+    model = "Orange Pi 5 Plus - Ubuntu - GameScope-Pi Edition";
+    compatible = "xunlong,orangepi-5-plus", "rockchip,rk3588s";
+    
+    metadata {
+        build-type = "gamescope-pi";
+        kernel-version = "6.6";
+        distro-name = "ubuntu";
+        distro-version = "22.04";
+        gpu-driver = "g13p0";
+        gpu-overclock = "enabled";
+        av1-decode = "enabled";
+    };
+
+    chosen {
+        bootargs = "console=ttyS2,1500000n8 root=/dev/mmcblk0p2 rootwait rw loglevel=3 quiet splash";
+    };
+
+    /* GameScope specific configurations */
+    gamescope {
+        compatible = "gamescope,config";
+        default-resolution = "1920x1080";
+        default-refresh = <60>;
+        hdr-enabled;
+        vrr-enabled;
+        composite-priority = "realtime";
+    };
+
+    /* GPU overclocking settings */
+    gpu_opp_table: opp-table-gpu {
+        compatible = "operating-points-v2";
+        
+        opp-300000000 {
+            opp-hz = /bits/ 64 <300000000>;
+            opp-microvolt = <675000>;
+        };
+        opp-400000000 {
+            opp-hz = /bits/ 64 <400000000>;
+            opp-microvolt = <675000>;
+        };
+        opp-600000000 {
+            opp-hz = /bits/ 64 <600000000>;
+            opp-microvolt = <675000>;
+        };
+        opp-800000000 {
+            opp-hz = /bits/ 64 <800000000>;
+            opp-microvolt = <750000>;
+        };
+        opp-1000000000 {
+            opp-hz = /bits/ 64 <1000000000>;
+            opp-microvolt = <850000>;
+        };
+    };
+
+    /* Mali GPU configuration */
+    gpu: gpu@fb000000 {
+        compatible = "arm,mali-g610", "arm,mali-valhall";
+        reg = <0x0 0xfb000000 0x0 0x200000>,
+              <0x0 0xfb200000 0x0 0x200000>;
+        interrupts = <GIC_SPI 92 IRQ_TYPE_LEVEL_HIGH>,
+                     <GIC_SPI 93 IRQ_TYPE_LEVEL_HIGH>,
+                     <GIC_SPI 94 IRQ_TYPE_LEVEL_HIGH>;
+        interrupt-names = "job", "mmu", "gpu";
+        clocks = <&cru CLK_GPU>;
+        clock-names = "core";
+        operating-points-v2 = <&gpu_opp_table>;
+        power-domains = <&power RK3588_PD_GPU>;
+        status = "okay";
+        
+        mali-supply = <&vdd_gpu_s0>;
+    };
+
+    /* AV1 decoder configuration */
+    av1_decoder: av1-decoder@fdb70000 {
+        compatible = "rockchip,rk3588-av1-decoder";
+        reg = <0x0 0xfdb70000 0x0 0x800>;
+        interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>;
+        clocks = <&cru ACLK_AV1>, <&cru PCLK_AV1>;
+        clock-names = "aclk", "pclk";
+        resets = <&cru SRST_A_AV1>, <&cru SRST_P_AV1>;
+        reset-names = "axi", "ahb";
+        power-domains = <&power RK3588_PD_AV1>;
+        status = "okay";
+    };
+
+    /* Audio configuration for gaming */
+    sound {
+        compatible = "simple-audio-card";
+        simple-audio-card,name = "GameScope-Audio";
+        simple-audio-card,format = "i2s";
+        simple-audio-card,bitclock-master = <&sound_cpu>;
+        simple-audio-card,frame-master = <&sound_cpu>;
+        
+        sound_cpu: simple-audio-card,cpu {
+            sound-dai = <&i2s0_8ch>;
+        };
+        
+        simple-audio-card,codec {
+            sound-dai = <&hdmi>;
+        };
+    };
+};
+
+/* Enable high-performance CPU governors */
+&cpu_l0 {
+    cpu-supply = <&vdd_cpu_lit_s0>;
+    operating-points-v2 = <&cluster0_opp_table>;
+};
+
+&cpu_b0 {
+    cpu-supply = <&vdd_cpu_big0_s0>;
+    operating-points-v2 = <&cluster1_opp_table>;
+};
+
+&cpu_b2 {
+    cpu-supply = <&vdd_cpu_big1_s0>;
+    operating-points-v2 = <&cluster2_opp_table>;
+};
+
+/* HDMI output for gaming */
+&hdmi {
+    status = "okay";
+    pinctrl-names = "default";
+    pinctrl-0 = <&hdmi_pins>;
+};
+
+&hdmi_in_vp0 {
+    status = "okay";
+};
+
+&hdmiphy {
+    status = "okay";
+};
+
+/* Display subsystem */
+&display_subsystem {
+    status = "okay";
+};
+
+&vop {
+    status = "okay";
+};
+
+&vop_mmu {
+    status = "okay";
+};
+
+/* PCIe for external GPU support */
+&pcie3x4 {
+    reset-gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
+    vpcie3v3-supply = <&vcc3v3_pcie30>;
+    status = "okay";
+};
+
+/* USB 3.0 for gaming peripherals */
+&usbdrd_dwc3_0 {
+    dr_mode = "host";
+    status = "okay";
+};
+
+&usbdrd3_0 {
+    status = "okay";
+};
+
+/* Thermal management for gaming loads */
+&tsadc {
+    rockchip,hw-tshut-mode = <1>;
+    rockchip,hw-tshut-polarity = <0>;
+    rockchip,hw-tshut-temp = <110000>;
+    status = "okay";
+};
+
+&thermal_zones {
+    soc-thermal {
+        polling-delay-passive = <100>;
+        polling-delay = <1000>;
+        sustainable-power = <5000>;
+        
+        trips {
+            soc_active0: trip-point@0 {
+                temperature = <55000>;
+                hysteresis = <2000>;
+                type = "active";
+            };
+            soc_active1: trip-point@1 {
+                temperature = <65000>;
+                hysteresis = <2000>;
+                type = "active";
+            };
+            soc_active2: trip-point@2 {
+                temperature = <75000>;
+                hysteresis = <2000>;
+                type = "active";
+            };
+        };
+        
+        cooling-maps {
+            map0 {
+                trip = <&soc_active0>;
+                cooling-device = <&fan0 0 1>;
+            };
+            map1 {
+                trip = <&soc_active1>;
+                cooling-device = <&fan0 1 2>;
+            };
+            map2 {
+                trip = <&soc_active2>;
+                cooling-device = <&fan0 2 3>;
+            };
+        };
+    };
+};
+
+/* Fan control for thermal management */
+&pwm1 {
+    status = "okay";
+};
+
+/ {
+    fan0: pwm-fan {
+        compatible = "pwm-fan";
+        pwms = <&pwm1 0 50000 0>;
+        #cooling-cells = <2>;
+        cooling-levels = <0 64 128 192 255>;
+    };
+};

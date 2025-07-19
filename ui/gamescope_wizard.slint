@@ -1,0 +1,402 @@
+import { Button, ComboBox, LineEdit, CheckBox, GroupBox, ScrollView, VerticalBox, HorizontalBox, GridBox, TabWidget, StandardListView, StandardTableView } from "std-widgets.slint";
+
+// Main GameScope Wizard Window
+export component GameScopeWizard inherits Window {
+    title: "GameScope Wizard - Orange Pi 5 Plus Builder";
+    preferred-width: 1000px;
+    preferred-height: 700px;
+    
+    // Define the build configuration struct
+    in-out property <string> hostname: "orangepi-gamescope";
+    in-out property <string> username: "gamer";
+    in-out property <string> password: "";
+    in-out property <string> root-password: "";
+    in-out property <string> locale: "en_US.UTF-8";
+    in-out property <string> timezone: "UTC";
+    
+    // Kernel and desktop options
+    in-out property <int> kernel-choice: 0; // 0 = Rockchip 5.1, 1 = Rockchip 6.1
+    in-out property <int> desktop-choice: 0; // 0 = LXQt + GameScope, 1 = GameScope + RetroArch
+    in-out property <string> output-path: "/tmp/gamescope-build";
+    in-out property <bool> write-to-device: false;
+    
+    // Build status
+    in-out property <bool> build-in-progress: false;
+    in-out property <string> build-status: "Ready to build";
+    in-out property <float> build-progress: 0.0;
+    
+    // Callbacks
+    callback start-build();
+    callback cancel-build();
+    callback browse-output-path();
+    
+    VerticalBox {
+        padding: 20px;
+        spacing: 10px;
+        
+        // Header
+        HorizontalBox {
+            Text {
+                text: "🎮 GameScope Wizard for Orange Pi 5 Plus";
+                font-size: 24px;
+                font-weight: 700;
+                color: #2563eb;
+            }
+            Rectangle { }
+        }
+        
+        // Main content in tabs
+        TabWidget {
+            Tab {
+                title: "System Configuration";
+                
+                ScrollView {
+                    VerticalBox {
+                        spacing: 15px;
+                        
+                        // System Settings Group
+                        GroupBox {
+                            title: "System Settings";
+                            
+                            GridBox {
+                                Row {
+                                    Text { text: "Hostname:"; }
+                                    LineEdit {
+                                        text <=> hostname;
+                                        placeholder-text: "orangepi-gamescope";
+                                    }
+                                }
+                                
+                                Row {
+                                    Text { text: "Username:"; }
+                                    LineEdit {
+                                        text <=> username;
+                                        placeholder-text: "gamer";
+                                    }
+                                }
+                                
+                                Row {
+                                    Text { text: "Password:"; }
+                                    LineEdit {
+                                        text <=> password;
+                                        input-type: InputType.password;
+                                        placeholder-text: "Enter password";
+                                    }
+                                }
+                                
+                                Row {
+                                    Text { text: "Root Password:"; }
+                                    LineEdit {
+                                        text <=> root-password;
+                                        input-type: InputType.password;
+                                        placeholder-text: "Enter root password";
+                                    }
+                                }
+                                
+                                Row {
+                                    Text { text: "Locale:"; }
+                                    ComboBox {
+                                        model: ["en_US.UTF-8", "en_GB.UTF-8", "de_DE.UTF-8", "fr_FR.UTF-8", "es_ES.UTF-8", "ja_JP.UTF-8"];
+                                        current-value <=> locale;
+                                    }
+                                }
+                                
+                                Row {
+                                    Text { text: "Timezone:"; }
+                                    ComboBox {
+                                        model: ["UTC", "America/New_York", "America/Los_Angeles", "Europe/London", "Europe/Berlin", "Asia/Tokyo"];
+                                        current-value <=> timezone;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Kernel Selection Group
+                        GroupBox {
+                            title: "Kernel Selection";
+                            
+                            VerticalBox {
+                                spacing: 10px;
+                                
+                                HorizontalBox {
+                                    CheckBox {
+                                        text: "Rockchip 5.1 (Stable - Recommended for stability)";
+                                        checked: kernel-choice == 0;
+                                        toggled => {
+                                            if (self.checked) {
+                                                kernel-choice = 0;
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                Text {
+                                    text: "• Proven stable kernel with excellent hardware support\n• Optimized for Orange Pi 5 Plus\n• Best for production systems";
+                                    color: #6b7280;
+                                    font-size: 12px;
+                                }
+                                
+                                HorizontalBox {
+                                    CheckBox {
+                                        text: "Rockchip 6.1 (Modern - Gaming optimizations)";
+                                        checked: kernel-choice == 1;
+                                        toggled => {
+                                            if (self.checked) {
+                                                kernel-choice = 1;
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                Text {
+                                    text: "• Latest kernel with gaming optimizations\n• Enhanced performance features\n• Better support for modern gaming features";
+                                    color: #6b7280;
+                                    font-size: 12px;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Tab {
+                title: "GameScope Options";
+                
+                ScrollView {
+                    VerticalBox {
+                        spacing: 15px;
+                        
+                        // Desktop Environment Group
+                        GroupBox {
+                            title: "Desktop Environment";
+                            
+                            VerticalBox {
+                                spacing: 10px;
+                                
+                                HorizontalBox {
+                                    CheckBox {
+                                        text: "LXQt Desktop + GameScope";
+                                        checked: desktop-choice == 0;
+                                        toggled => {
+                                            if (self.checked) {
+                                                desktop-choice = 0;
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                Text {
+                                    text: "• Full desktop environment with GameScope compositor\n• Best for users who want desktop functionality\n• Supports both gaming and productivity tasks\n• Wayland-based with X11 compatibility";
+                                    color: #6b7280;
+                                    font-size: 12px;
+                                }
+                                
+                                HorizontalBox {
+                                    CheckBox {
+                                        text: "GameScope + RetroArch (Console Mode)";
+                                        checked: desktop-choice == 1;
+                                        toggled => {
+                                            if (self.checked) {
+                                                desktop-choice = 1;
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                Text {
+                                    text: "• Minimal system optimized for gaming\n• Boots directly into GameScope with RetroArch\n• Maximum performance for emulation\n• Console-like experience";
+                                    color: #6b7280;
+                                    font-size: 12px;
+                                }
+                            }
+                        }
+                        
+                        // GameScope Features Group
+                        GroupBox {
+                            title: "GameScope Features";
+                            
+                            VerticalBox {
+                                spacing: 8px;
+                                
+                                Text {
+                                    text: "🎯 Valve's GameScope Compositor";
+                                    font-weight: 600;
+                                    color: #059669;
+                                }
+                                
+                                Text {
+                                    text: "• Hardware-accelerated Wayland compositor\n• Optimized for gaming performance\n• Support for VRR, HDR, and advanced display features\n• Steam Big Picture mode compatible";
+                                    color: #6b7280;
+                                    font-size: 12px;
+                                }
+                                
+                                Text {
+                                    text: "🎮 Mali G610 GPU Optimization";
+                                    font-weight: 600;
+                                    color: #059669;
+                                }
+                                
+                                Text {
+                                    text: "• Optimized drivers for Orange Pi 5 Plus\n• Vulkan and OpenGL ES support\n• Hardware video acceleration\n• Gaming-tuned performance governor";
+                                    color: #6b7280;
+                                    font-size: 12px;
+                                }
+                                
+                                Text {
+                                    text: "🔊 Audio System";
+                                    font-weight: 600;
+                                    color: #059669;
+                                }
+                                
+                                Text {
+                                    text: "• PulseAudio + PipeWire for low-latency audio\n• Gaming-optimized audio settings\n• Support for all audio formats\n• Bluetooth audio support";
+                                    color: #6b7280;
+                                    font-size: 12px;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            Tab {
+                title: "Build Options";
+                
+                ScrollView {
+                    VerticalBox {
+                        spacing: 15px;
+                        
+                        // Output Settings Group
+                        GroupBox {
+                            title: "Output Settings";
+                            
+                            VerticalBox {
+                                spacing: 10px;
+                                
+                                HorizontalBox {
+                                    Text { text: "Output Path:"; }
+                                    LineEdit {
+                                        text <=> output-path;
+                                        placeholder-text: "/tmp/gamescope-build";
+                                    }
+                                    Button {
+                                        text: "Browse";
+                                        clicked => { browse-output-path(); }
+                                    }
+                                }
+                                
+                                HorizontalBox {
+                                    CheckBox {
+                                        text: "Write directly to device (skip image creation)";
+                                        checked <=> write-to-device;
+                                    }
+                                }
+                                
+                                Text {
+                                    text: "⚠️ Direct device writing is experimental and requires Orange Pi to be booted from SD card";
+                                    color: #f59e0b;
+                                    font-size: 12px;
+                                }
+                            }
+                        }
+                        
+                        // Build Summary Group
+                        GroupBox {
+                            title: "Build Summary";
+                            
+                            VerticalBox {
+                                spacing: 8px;
+                                
+                                Text {
+                                    text: "📦 Build Configuration:";
+                                    font-weight: 600;
+                                }
+                                
+                                Text {
+                                    text: "System: " + hostname + " (" + username + ")";
+                                    color: #6b7280;
+                                }
+                                
+                                Text {
+                                    text: "Kernel: " + (kernel-choice == 0 ? "Rockchip 5.1 (Stable)" : "Rockchip 6.1 (Gaming)");
+                                    color: #6b7280;
+                                }
+                                
+                                Text {
+                                    text: "Desktop: " + (desktop-choice == 0 ? "LXQt + GameScope" : "GameScope + RetroArch");
+                                    color: #6b7280;
+                                }
+                                
+                                Text {
+                                    text: "Output: " + output-path;
+                                    color: #6b7280;
+                                }
+                                
+                                Text {
+                                    text: "⏱️ Estimated build time: 45-90 minutes";
+                                    color: #f59e0b;
+                                    font-weight: 600;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Progress and Controls
+        VerticalBox {
+            spacing: 10px;
+            
+            // Progress Bar
+            if build-in-progress: HorizontalBox {
+                Text {
+                    text: "Building: " + build-status;
+                    color: #059669;
+                }
+                Rectangle {
+                    height: 6px;
+                    background: #e5e7eb;
+                    border-radius: 3px;
+                    
+                    Rectangle {
+                        width: parent.width * build-progress;
+                        height: parent.height;
+                        background: #10b981;
+                        border-radius: 3px;
+                    }
+                }
+            }
+            
+            // Control Buttons
+            HorizontalBox {
+                spacing: 10px;
+                
+                Rectangle { } // Spacer
+                
+                Button {
+                    text: build-in-progress ? "Cancel Build" : "Start Build";
+                    primary: !build-in-progress;
+                    enabled: password != "" && root-password != "";
+                    
+                    clicked => {
+                        if (build-in-progress) {
+                            cancel-build();
+                        } else {
+                            start-build();
+                        }
+                    }
+                }
+                
+                Button {
+                    text: "Exit";
+                    enabled: !build-in-progress;
+                    
+                    clicked => {
+                        // Exit the application
+                    }
+                }
+            }
+        }
+    }
+}

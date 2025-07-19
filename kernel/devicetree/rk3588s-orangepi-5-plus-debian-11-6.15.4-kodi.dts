@@ -1,0 +1,124 @@
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include "rk3588s.dtsi"
+#include "rk3588s-orangepi-5.dtsi"
+
+/ {
+    model = "Orange Pi 5 Plus - debian-11 6.15.4 - Kodi Optimized";
+    compatible = "xunlong,orangepi-5-plus", "rockchip,rk3588s";
+    
+    metadata {
+        build-type = "kodi-media-center";
+        kernel-version = "6.15.4";
+        distro-name = "debian";
+        distro-version = "11";
+        optimization = "media-playback";
+        features = "hdr10,av1-decode,hevc-10bit,cec";
+    };
+
+    chosen {
+        bootargs = "console=ttyS2,1500000n8 root=/dev/mmcblk0p2 rootwait rw quiet loglevel=3 plymouth.enable=0";
+    };
+
+    reserved-memory {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+
+        linux,cma {
+            compatible = "shared-dma-pool";
+            reusable;
+            size = <0x0 0x40000000>; /* 1GB for 4K video */
+            alignment = <0x0 0x400000>;
+            linux,cma-default;
+        };
+    };
+};
+
+/* Video decoders */
+&vdec {
+    status = "okay";
+    rockchip,h264-decoder;
+    rockchip,h265-decoder;
+    rockchip,vp9-decoder;
+    rockchip,av1-decoder;
+    rockchip,max-width = <3840>;
+    rockchip,max-height = <2160>;
+    rockchip,max-fps = <60>;
+};
+
+/* GPU for Kodi GUI */
+&gpu {
+    status = "okay";
+    operating-points-v2 = <&gpu_kodi_opp_table>;
+    
+    gpu_kodi_opp_table: opp-table {
+        compatible = "operating-points-v2";
+        
+        opp-200000000 {
+            opp-hz = /bits/ 64 <200000000>;
+            opp-microvolt = <650000>;
+        };
+        opp-400000000 {
+            opp-hz = /bits/ 64 <400000000>;
+            opp-microvolt = <700000>;
+        };
+        opp-600000000 {
+            opp-hz = /bits/ 64 <600000000>;
+            opp-microvolt = <750000>;
+        };
+    };
+};
+
+/* HDMI with CEC */
+&hdmi {
+    status = "okay";
+    rockchip,hdmi21-support;
+    rockchip,4k60-support;
+    rockchip,hdr10-support;
+};
+
+&hdmi_cec {
+    status = "okay";
+    pinctrl-names = "default";
+    pinctrl-0 = <&hdmi_cec_pins>;
+};
+
+/* Audio */
+&i2s0_8ch {
+    status = "okay";
+    rockchip,sample-rate = <192000>;
+    rockchip,channels = <8>;
+    rockchip,bit-depth = <32>;
+};
+
+/* Network */
+&gmac0 {
+    status = "okay";
+};
+
+/* USB Storage */
+&usbdrd_dwc3_0 {
+    dr_mode = "host";
+    status = "okay";
+};
+
+&usbdrd3_0 {
+    status = "okay";
+};
+
+/* SD Card */
+&sdmmc {
+    status = "okay";
+};
+
+/* Common peripherals */
+&uart2 {
+    status = "okay";
+};
+
+&tsadc {
+    status = "okay";
+};
+

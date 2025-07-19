@@ -1,0 +1,149 @@
+import { Button, VerticalBox, HorizontalBox, GroupBox, TabWidget, ScrollView, Text } from "std-widgets.slint";
+
+// Simple card component
+component SimpleCard inherits Rectangle {
+    in property <string> title;
+    in property <string> description;
+    in property <string> icon;
+    callback clicked;
+    
+    border-radius: 8px;
+    background: #f8f9fa;
+    border-width: 2px;
+    border-color: #007bff;
+    
+    TouchArea {
+        clicked => { root.clicked(); }
+    }
+    
+    VerticalBox {
+        padding: 16px;
+        
+        Text {
+            text: icon;
+            font-size: 24px;
+            horizontal-alignment: center;
+        }
+        
+        Text {
+            text: title;
+            font-size: 16px;
+            font-weight: 700;
+            horizontal-alignment: center;
+        }
+        
+        Text {
+            text: description;
+            font-size: 12px;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+    }
+}
+
+export component TestWindow inherits Window {
+    title: "LCCE Layout Test";
+    width: 1000px;
+    height: 700px;
+    
+    VerticalBox {
+        // Header
+        Rectangle {
+            height: 60px;
+            background: #007bff;
+            
+            HorizontalBox {
+                padding: 16px;
+                
+                Text {
+                    text: "🚀 Arm-Pi Tweaker: Live Custom Creation Edition";
+                    font-size: 18px;
+                    color: white;
+                    vertical-alignment: center;
+                }
+            }
+        }
+        
+        // Main content
+        ScrollView {
+            VerticalBox {
+                padding: 24px;
+                spacing: 24px;
+                
+                Text {
+                    text: "Live Custom Creation Modules";
+                    font-size: 20px;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                }
+                
+                GroupBox {
+                    title: "Core Modules";
+                    
+                    GridLayout {
+                        spacing: 16px;
+                        
+                        SimpleCard {
+                            row: 0;
+                            col: 0;
+                            title: "Kernel Modifications";
+                            description: "Customize kernel, modules, device tree";
+                            icon: "🐧";
+                        }
+                        
+                        SimpleCard {
+                            row: 0;
+                            col: 1;
+                            title: "Video Drivers";
+                            description: "GPU drivers, MPP, graphics settings";
+                            icon: "🎮";
+                        }
+                        
+                        SimpleCard {
+                            row: 1;
+                            col: 0;
+                            title: "Emulation & Media";
+                            description: "Kodi, RetroPie, multimedia frontends";
+                            icon: "🎬";
+                        }
+                        
+                        SimpleCard {
+                            row: 1;
+                            col: 1;
+                            title: "Storage Installation";
+                            description: "Install to NVMe/eMMC with mods";
+                            icon: "💾";
+                        }
+                    }
+                }
+                
+                GroupBox {
+                    title: "Advanced Tools";
+                    
+                    SimpleCard {
+                        title: "Arm-Pi Tweaker Suite";
+                        description: "Complete system configuration and tuning";
+                        icon: "🔧";
+                    }
+                }
+            }
+        }
+        
+        // Status bar
+        Rectangle {
+            height: 30px;
+            background: #343a40;
+            
+            HorizontalBox {
+                padding: 8px;
+                
+                Text {
+                    text: "Ready - Orange Pi 5 Plus detected";
+                    color: white;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}

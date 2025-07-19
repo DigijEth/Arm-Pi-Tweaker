@@ -1,0 +1,255 @@
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include "rk3588s.dtsi"
+#include "rk3588s-orangepi-5.dtsi"
+
+/ {
+    model = "Orange Pi 5 Plus - Kodi Media Center Edition";
+    compatible = "xunlong,orangepi-5-plus", "rockchip,rk3588s";
+    
+    metadata {
+        build-type = "kodi-media-center";
+        kernel-version = "6.6";
+        kodi-version = "21.0";
+        gpu-driver = "g13p0";
+        av1-decode = "enabled";
+        hdr-support = "enabled";
+    };
+
+    chosen {
+        bootargs = "console=ttyS2,1500000n8 root=/dev/mmcblk0p2 rootwait rw quiet splash loglevel=1";
+    };
+
+    /* Media center specific configurations */
+    media-center {
+        compatible = "kodi,config";
+        default-resolution = "3840x2160";
+        default-refresh = <60>;
+        hdr10-enabled;
+        dolby-vision-enabled;
+        auto-framerate-switching;
+        cec-enabled;
+    };
+
+    /* IR receiver for remote control */
+    ir_receiver {
+        compatible = "gpio-ir-receiver";
+        gpios = <&gpio0 RK_PA5 GPIO_ACTIVE_LOW>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&ir_receiver_pin>;
+        linux,rc-map-name = "rc-kodi";
+    };
+
+    /* Audio configuration for media playback */
+    sound {
+        compatible = "simple-audio-card";
+        simple-audio-card,name = "Kodi-HDMI-Audio";
+        simple-audio-card,format = "i2s";
+        simple-audio-card,mclk-fs = <128>;
+        simple-audio-card,bitclock-master = <&sound_cpu>;
+        simple-audio-card,frame-master = <&sound_cpu>;
+        
+        simple-audio-card,cpu {
+            sound-dai = <&i2s0_8ch>;
+        };
+        
+        simple-audio-card,codec {
+            sound-dai = <&hdmi>;
+        };
+    };
+
+    /* SPDIF output for digital audio */
+    spdif_sound {
+        compatible = "simple-audio-card";
+        simple-audio-card,name = "SPDIF";
+        
+        simple-audio-card,cpu {
+            sound-dai = <&spdif>;
+        };
+        
+        simple-audio-card,codec {
+            sound-dai = <&spdif_out>;
+        };
+    };
+
+    spdif_out: spdif-out {
+        compatible = "linux,spdif-dit";
+        #sound-dai-cells = <0>;
+    };
+};
+
+/* Video decoding hardware */
+&vdec {
+    status = "okay";
+};
+
+&vdec_mmu {
+    status = "okay";
+};
+
+/* VP9 decoder */
+&vp9_decoder {
+    status = "okay";
+};
+
+/* HEVC decoder */
+&hevc_decoder {
+    status = "okay";
+};
+
+/* AV1 decoder for modern codecs */
+&av1_decoder {
+    status = "okay";
+};
+
+/* HDMI with CEC support */
+&hdmi {
+    status = "okay";
+    pinctrl-names = "default";
+    pinctrl-0 = <&hdmi_pins>;
+    avdd-0v9-supply = <&vdd_0v9_hdmi>;
+    avdd-1v8-supply = <&vdd_1v8_hdmi>;
+    ddc-i2c-bus = <&i2c3>;
+    hpd-gpios = <&gpio1 RK_PA7 GPIO_ACTIVE_HIGH>;
+};
+
+&hdmi_cec {
+    status = "okay";
+    pinctrl-names = "default";
+    pinctrl-0 = <&hdmi_cec_pin>;
+};
+
+&hdmi_in_vp0 {
+    status = "okay";
+};
+
+&hdmiphy {
+    status = "okay";
+};
+
+/* Display subsystem for 4K output */
+&display_subsystem {
+    status = "okay";
+};
+
+&vop {
+    status = "okay";
+    assigned-clocks = <&cru DCLK_VOP0>, <&cru DCLK_VOP1>;
+    assigned-clock-parents = <&pmucru PLL_HPLL>, <&cru PLL_VPLL>;
+};
+
+&vop_mmu {
+    status = "okay";
+};
+
+/* GPU for UI rendering */
+&gpu {
+    mali-supply = <&vdd_gpu_s0>;
+    status = "okay";
+};
+
+/* Ethernet for streaming */
+&gmac0 {
+    phy-mode = "rgmii";
+    clock_in_out = "output";
+    snps,reset-gpio = <&gpio3 RK_PB7 GPIO_ACTIVE_LOW>;
+    snps,reset-active-low;
+    snps,reset-delays-us = <0 10000 100000>;
+    assigned-clocks = <&cru SCLK_GMAC0_RX_TX>, <&cru SCLK_GMAC0>;
+    assigned-clock-parents = <&cru SCLK_GMAC0_RGMII_SPEED>;
+    pinctrl-names = "default";
+    pinctrl-0 = <&gmac0_miim
+                 &gmac0_tx_bus2
+                 &gmac0_rx_bus2
+                 &gmac0_rgmii_clk
+                 &gmac0_rgmii_bus>;
+    tx_delay = <0x3c>;
+    rx_delay = <0x2f>;
+    phy-handle = <&rgmii_phy0>;
+    status = "okay";
+};
+
+&mdio0 {
+    rgmii_phy0: phy@1 {
+        compatible = "ethernet-phy-ieee802.3-c22";
+        reg = <0x1>;
+        reset-assert-us = <20000>;
+        reset-deassert-us = <100000>;
+        reset-gpios = <&gpio3 RK_PB7 GPIO_ACTIVE_LOW>;
+    };
+};
+
+/* USB for external storage */
+&usb_host0_ehci {
+    status = "okay";
+};
+
+&usb_host0_ohci {
+    status = "okay";
+};
+
+&usb_host1_ehci {
+    status = "okay";
+};
+
+&usb_host1_ohci {
+    status = "okay";
+};
+
+/* USB 3.0 for high-speed storage */
+&usbdrd_dwc3_0 {
+    dr_mode = "host";
+    status = "okay";
+};
+
+&usbdrd3_0 {
+    status = "okay";
+};
+
+/* SPDIF for digital audio output */
+&spdif {
+    status = "okay";
+    pinctrl-names = "default";
+    pinctrl-0 = <&spdif_tx>;
+};
+
+/* I2S for HDMI audio */
+&i2s0_8ch {
+    status = "okay";
+    rockchip,trcm-sync-tx-only;
+    pinctrl-names = "default";
+    pinctrl-0 = <&i2s0_lrck
+                 &i2s0_mclk
+                 &i2s0_sclk
+                 &i2s0_sdi0
+                 &i2s0_sdo0>;
+};
+
+/* Power management for low idle consumption */
+&cpu_l0 {
+    cpu-idle-states = <&CPU_SLEEP &CLUSTER_SLEEP>;
+};
+
+&cpu_b0 {
+    cpu-idle-states = <&CPU_SLEEP &CLUSTER_SLEEP>;
+};
+
+&cpu_b2 {
+    cpu-idle-states = <&CPU_SLEEP &CLUSTER_SLEEP>;
+};
+
+/* Pinctrl additions */
+&pinctrl {
+    ir-receiver {
+        ir_receiver_pin: ir-receiver-pin {
+            rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_up>;
+        };
+    };
+
+    hdmi {
+        hdmi_cec_pin: hdmi-cec-pin {
+            rockchip,pins = <1 RK_PA7 RK_FUNC_1 &pcfg_pull_none>;
+        };
+    };
+};
