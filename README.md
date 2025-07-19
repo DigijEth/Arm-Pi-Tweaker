@@ -1,7 +1,8 @@
 
 
 
-![Arm-Pi Tweaker](https://i.ibb.co/1JJMwJNg/logo1.jpg)
+![Project Logo](https://i.ibb.co/1JJMwJNg/logo1.jpg)
+
 
 
 # Orange-Pi Builder
