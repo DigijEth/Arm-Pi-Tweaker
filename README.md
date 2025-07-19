@@ -37,7 +37,7 @@
 
 Note:LCCM / LCCE is the GUI version of the Arm-Pi Tweaker, it is not safe for public release yet. It is more likely to damage your system so it is not included. I have noticed that some of the tools are giving the wrong information, I have to investigate this, im guessing claude opus was daydreaming again while helping me debug errors. I dont know what happened, but not only has opus become dumber than usual over the last week, Anthropic nerfed our enterprise accounts so updates and fixes may be slower than usual as I am the only human on this entire project.
 
-# Orange-Pi Builder
+# Orange-Pi Toolbox
 
 ## Warning
 
