@@ -1,4 +1,4 @@
-
+7-26 Update: New version with TUI and GUI coming soon. Should be out this weekend sometime if I can get the image build function to work properly. I also have a .patch to fix hdmi issues on kernel 6.1
 
 
 
