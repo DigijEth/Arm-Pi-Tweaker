@@ -1,6 +1,6 @@
 I will be moving to a self hosted gitea server where the LLM model for Rocky will be saved and running the remote server for. The reason for this is everytime I try and do a new commit I have to fight with github and --force everything as it always says my repo is newer than my codebase no matter what. My local code can be 2 weeks ahead, but git hub still says that its version is newer and I have to pull and "become current" with the remote version. Im tired of the accident "updates" vs code runs my copilot and decides it knows better then me and runs things without permissiom. That has set me back 3 times devloping this app. I would be much furthur into writing the Rocky drivers that will intergrate a more advanced version the Ai into the OS and will allow us to collect data that will make better drivers.  
 
-Als always, this application is still in alpha, it is very unstable I am still testing it and major updates are very common.
+As always, this application is still in alpha, it is very unstable I am still testing it and major updates are very common.
 
 # Arm-Pi Tweaker
 
