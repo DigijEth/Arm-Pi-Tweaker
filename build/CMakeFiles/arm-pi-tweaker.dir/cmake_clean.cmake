@@ -1,0 +1,40 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/arm-pi-tweaker_autogen.dir/AutogenUsed.txt"
+  "CMakeFiles/arm-pi-tweaker_autogen.dir/ParseCache.txt"
+  "arm-pi-tweaker_autogen"
+  "CMakeFiles/arm-pi-tweaker.dir/arm-pi-tweaker_autogen/mocs_compilation.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/arm-pi-tweaker_autogen/mocs_compilation.cpp.o.d"
+  "CMakeFiles/arm-pi-tweaker.dir/gpumanager.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/gpumanager.cpp.o.d"
+  "CMakeFiles/arm-pi-tweaker.dir/imagebuilder.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/imagebuilder.cpp.o.d"
+  "CMakeFiles/arm-pi-tweaker.dir/kernelmanager.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/kernelmanager.cpp.o.d"
+  "CMakeFiles/arm-pi-tweaker.dir/main.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/main.cpp.o.d"
+  "CMakeFiles/arm-pi-tweaker.dir/mainwindow.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/mainwindow.cpp.o.d"
+  "CMakeFiles/arm-pi-tweaker.dir/storagemanager.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/storagemanager.cpp.o.d"
+  "CMakeFiles/arm-pi-tweaker.dir/systemmanager.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/systemmanager.cpp.o.d"
+  "CMakeFiles/arm-pi-tweaker.dir/widgets/backupwizard.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/widgets/backupwizard.cpp.o.d"
+  "CMakeFiles/arm-pi-tweaker.dir/widgets/customimagewizard.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/widgets/customimagewizard.cpp.o.d"
+  "CMakeFiles/arm-pi-tweaker.dir/widgets/rockytab.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/widgets/rockytab.cpp.o.d"
+  "CMakeFiles/arm-pi-tweaker.dir/widgets/uefitab.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/widgets/uefitab.cpp.o.d"
+  "CMakeFiles/arm-pi-tweaker.dir/widgets/upgradewidget.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/widgets/upgradewidget.cpp.o.d"
+  "CMakeFiles/arm-pi-tweaker.dir/widgets/welcometab.cpp.o"
+  "CMakeFiles/arm-pi-tweaker.dir/widgets/welcometab.cpp.o.d"
+  "bin/arm-pi-tweaker"
+  "bin/arm-pi-tweaker.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/arm-pi-tweaker.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

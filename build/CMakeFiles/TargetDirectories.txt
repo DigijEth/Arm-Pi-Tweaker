@@ -1,0 +1,4 @@
+/home/snake/Rocky/slimmed/build/CMakeFiles/arm-pi-tweaker.dir
+/home/snake/Rocky/slimmed/build/CMakeFiles/edit_cache.dir
+/home/snake/Rocky/slimmed/build/CMakeFiles/rebuild_cache.dir
+/home/snake/Rocky/slimmed/build/CMakeFiles/arm-pi-tweaker_autogen.dir

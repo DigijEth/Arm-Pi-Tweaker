@@ -1,0 +1,2 @@
+# Hashes of file build rules.
+f562049c66f027cef02ccc1ec32b481a CMakeFiles/arm-pi-tweaker_autogen
