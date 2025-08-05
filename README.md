@@ -23,6 +23,7 @@ Arm-Pi Tweaker introduces **Rocky**, an AI assistant specifically trained on Ora
 - Performance tuning recommendations
 - Custom configuration suggestions
 - Real-time hardware analysis and insights
+- Model download will be add shortly, ability to connect to remote model model vs local model coming in next update.
 
 #### Rocky AI Features (Coming Soon)
 - **Integrated AI Chat**: Direct integration within the application for real-time assistance
