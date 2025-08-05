@@ -9,10 +9,7 @@ A comprehensive optimization and management tool for the Orange Pi 5 Plus, featu
 ## Major Features
 
 ### System Optimization
-- **GPU Management**: Advanced GPU driver configuration and optimization for RK3588 with Mali-specific tweaks
-  - Mesa driver optimizations and tuning
-  - Valhall driver tweaks and performance enhancements
-  - Complete GPU menu overhaul (coming soon)
+- **GPU Management**: - Complete GPU menu overhaul (coming soon)
 - **Kernel Management**: Custom kernel building, patching, and performance tuning
 - **Storage Management**: F2FS optimization, partition management, and backup/restore functionality
 - **UEFI Configuration**: Boot management and UEFI settings optimization
