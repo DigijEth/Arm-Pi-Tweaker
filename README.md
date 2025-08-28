@@ -4,7 +4,7 @@ I apologize for not updating in a while, my life unexpectedly took a weird, fuck
 
 Programming can be deeply rewarding, but it also comes with risks that aren’t always visible. Long hours, constant problem-solving, and working in isolation can quietly wear down even the strongest minds. Many developers struggle with depression, anxiety, or burnout but keep it to themselves—believing they have to debug life the way they debug code. Alone and in the dark eating a bag of Cheetos naked.
 
-But the truth is, staying silent only makes things harder. Talking with someone—whether it’s a friend, a peer, or a professional—can make a real difference. You don’t have to face it alone. Whether its your belief that the world has become a shithole and its only a matter of time before Jackboots kickdown your door or you ran out of Carlo Rossi to help wash down the Cheetos, just remember that killing yourself doesn't solve a damn thing.
+But the truth is, staying silent only makes things harder. Talking with someone—whether it’s a friend, a peer, or a professional—can make a real difference. You don’t have to face it alone. Whether its your belief that the world has become a shithole and its only a matter of time before Jackboots kickdown your door or you ran out of Carlo Rossi to help wash down the Cheetos, just remember that killing yourself doesn't solve a damn thing for you or the world.
 
 💙 For resources and community built around supporting mental health in the tech and gaming world, visit [Take This](https://www.takethis.org).
 
@@ -19,9 +19,9 @@ If you or someone you know is in crisis or thinking about suicide, you are not a
 
 You matter. Please reach out for support.
 
----
+-----
 
-Would you like me to also create a **condensed version** (like a footer box or sidebar callout) for when you don’t want a full section?
+One last note: darkHal Security will be taking over this project as it was Pixel's last project and the team wishes to finish it. darkHal.ai
 
 
 # Arm-Pi Tweaker
