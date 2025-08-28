@@ -21,7 +21,7 @@ You matter. Please reach out for support.
 
 -----
 
-One last note: darkHal Security will be taking over this project darkHal.ai
+One last note: darkHal Security will be taking over this project: darkHal.ai. If you would like to join, please email ssSnake@darkHal.org or sshhh@setecastronomy.gg. Please include a short bio and a link to 2-3 projects you have worked on. If you have no experience and would like to join, email me at ssSnake@darkHal.org and make your case.
 
 
 # Arm-Pi Tweaker
