@@ -1,11 +1,28 @@
-Next update coming soon. The image building logic has been fixed and no longer creates a race condition where the kernel tries to build while the source code is being downloaded. Also I have implemented a new IMG creating process for those who just want to edit a live image.
+I apologize for not updating in a while, my life unexpectedly took a weird, fucked up turn and haven't had either the will nor time to continue much work after losing one of the main members of my CSG (Cyber security Group), but I have finally resumed but I have a short message to share...sorry my dark humor is baked into this:
 
-I have not had time to finetune the llm, or migrate to the new server. I have worked on creating the logic to integrate the application as a system app so it can monitor hardware interactions that can help improve our ability to create PanVK and Panfrost drivers that work just as well as DDK based drivers.
+## 🖥️ Mental Health & Programmers
 
+Programming can be deeply rewarding, but it also comes with risks that aren’t always visible. Long hours, constant problem-solving, and working in isolation can quietly wear down even the strongest minds. Many developers struggle with depression, anxiety, or burnout but keep it to themselves—believing they have to debug life the way they debug code. Alone and in the dark eating a bag of Cheetos naked.
 
-I will be moving to a self hosted gitea server where the LLM model for Rocky will be saved and running the remote server for. The reason for this is everytime I try and do a new commit I have to fight with github and --force everything as it always says my repo is newer than my codebase no matter what. My local code can be 2 weeks ahead, but git hub still says that its version is newer and I have to pull and "become current" with the remote version. Im tired of the accident "updates" vs code runs my copilot and decides it knows better then me and runs things without permissiom. That has set me back 3 times devloping this app. I would be much furthur into writing the Rocky drivers that will intergrate a more advanced version the Ai into the OS and will allow us to collect data that will make better drivers.  
+But the truth is, staying silent only makes things harder. Talking with someone—whether it’s a friend, a peer, or a professional—can make a real difference. You don’t have to face it alone.
 
-As always, this application is still in alpha, it is very unstable I am still testing it and major updates are very common.
+💙 For resources and community built around supporting mental health in the tech and gaming world, visit [Take This](https://www.takethis.org).
+
+---
+
+## 📞 Crisis Support
+
+If you or someone you know is in crisis or thinking about suicide, you are not alone. Help is available right now:
+
+* **United States:** Dial or text **988** to connect with the [Suicide & Crisis Lifeline](https://988lifeline.org).
+* **Outside the U.S.:** Visit [findahelpline.com](https://findahelpline.com) for international hotlines, or call your local emergency services.
+
+You matter. Please reach out for support.
+
+---
+
+Would you like me to also create a **condensed version** (like a footer box or sidebar callout) for when you don’t want a full section?
+
 
 # Arm-Pi Tweaker
 
