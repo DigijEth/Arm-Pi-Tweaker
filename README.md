@@ -1,4 +1,4 @@
-I apologize for not updating in a while, my life unexpectedly took a weird, fucked up turn and haven't had either the will nor time to continue much work after losing one of the main members of my CSG (Cyber security Group), but I have finally resumed. I also have a short message to share...sorry my dark humor is baked into this:
+I apologize for not updating in a while, my life unexpectedly took a weird, fucked up turn and haven't had either the will nor time to continue much work after losing a friend and mentor, but I have finally resumed. I also have a short message to share...sorry my dark humor is baked into this:
 
 ## 🖥️ Mental Health & Programmers
 
