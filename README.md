@@ -21,7 +21,7 @@ You matter. Please reach out for support.
 
 -----
 
-One last note: darkHal Security will be taking over this project as it was Pixel's last project and the team wishes to finish it. darkHal.ai
+One last note: darkHal Security will be taking over this project darkHal.ai
 
 
 # Arm-Pi Tweaker
