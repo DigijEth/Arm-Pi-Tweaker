@@ -1,3 +1,5 @@
+My computer has suffered a catastropic failure. I have everything stil ready to upload on the hard drive but I am not sure when I will get around to it. In the mean time, I will upload a basic utility to setup a custom img and the GPU tool that helps users get the most out of the GPU for emulation and media streaming. I apologize for all the delays, life has been hell.
+
 I apologize for not updating in a while, my life unexpectedly took a weird, fucked up turn and haven't had either the will nor time to continue much work after losing a friend and mentor, but I have finally resumed. I also have a short message to share...sorry my dark humor is baked into this:
 
 ## 🖥️ Mental Health & Programmers
